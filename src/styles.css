@@ -1,0 +1,430 @@
+:root {
+  font-family:
+    Inter,
+    "PingFang SC",
+    "Microsoft YaHei",
+    system-ui,
+    sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-background-wash);
+}
+
+.authPage {
+  box-sizing: border-box;
+  padding: var(--spacing-6);
+  background:
+    radial-gradient(
+      circle at 50% 0,
+      color-mix(in srgb, var(--color-accent-muted) 64%, transparent),
+      transparent 34rem
+    ),
+    var(--color-background-wash);
+}
+
+.authPanel {
+  inline-size: min(100%, 27rem);
+}
+
+.authBrandIcon {
+  display: block;
+  inline-size: calc(var(--spacing-12) + var(--spacing-2));
+  block-size: calc(var(--spacing-12) + var(--spacing-2));
+  border-radius: var(--radius-container);
+  box-shadow: var(--shadow-low);
+  object-fit: cover;
+}
+
+.astryx-field-label > span:has(> span[aria-hidden="true"]) {
+  display: inline-flex;
+  order: -1;
+  align-items: center;
+  font-size: 0;
+  line-height: 1;
+}
+
+.astryx-field-label > span:has(> span[aria-hidden="true"]) > span {
+  display: none;
+}
+
+.astryx-field-label > span:has(> span[aria-hidden="true"])::after {
+  content: "";
+  inline-size: var(--spacing-1-5);
+  block-size: var(--spacing-1-5);
+  border-radius: var(--radius-full);
+  background: var(--color-error);
+}
+
+.workspace {
+  min-height: 100dvh;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-accent-background) 38%, transparent),
+      transparent 22rem
+    ),
+    var(--color-background-wash);
+}
+
+.appHeader {
+  min-height: 4.5rem;
+  padding: var(--spacing-4) var(--spacing-6);
+  background: color-mix(in srgb, var(--color-background-surface) 88%, transparent);
+  backdrop-filter: blur(1rem);
+}
+
+.headerCollapseButton {
+  background: var(--color-background-muted) !important;
+}
+
+.headerCollapseButton:hover {
+  background: var(--color-background-selected) !important;
+}
+
+.pageContent {
+  min-width: 0;
+  padding: var(--spacing-6);
+  overflow: auto;
+}
+
+.navTabs {
+  min-height: 3rem;
+  padding: var(--spacing-2) var(--spacing-4);
+  background: var(--color-background-surface);
+  overflow-x: auto;
+}
+
+.breadcrumbArea {
+  min-width: 0;
+}
+
+.breadcrumbs {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.brandNavIcon {
+  display: block;
+  inline-size: 1.35rem;
+  block-size: 1.35rem;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.accountDock {
+  container-type: inline-size;
+  inline-size: 100%;
+}
+
+.accountSummary {
+  min-width: 0;
+  box-sizing: border-box;
+  margin-block-end: calc(-1 * var(--spacing-3));
+  padding-block: var(--spacing-2);
+  padding-inline: var(--spacing-2);
+  border-radius: var(--radius-element);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.accountAvatar {
+  flex: 0 0 auto;
+}
+
+.accountDetails {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.accountName,
+.accountDept {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accountMenu {
+  flex: 0 0 auto;
+  color: var(--color-text-secondary) !important;
+}
+
+.resourcePage,
+.resourceHeader,
+.resourceActions,
+.filterPanel,
+.filterForm,
+.tablePanel,
+.resourceTable {
+  min-width: 0;
+}
+
+.filterForm {
+  align-items: flex-end;
+}
+
+.tablePanel {
+  overflow: clip;
+}
+
+.tablePanel .astryx-table-scroll-wrapper {
+  max-inline-size: 100%;
+  scrollbar-gutter: stable;
+}
+
+.resourceTable {
+  --table-sticky-background: var(--color-background-card);
+}
+
+.resourceTable .astryx-table-header-cell,
+.resourceTable .astryx-table-cell {
+  padding-inline: var(--spacing-4) !important;
+}
+
+.resourceTable .astryx-table-header-cell:first-child,
+.resourceTable .astryx-table-cell:first-child {
+  padding-inline-start: var(--spacing-8) !important;
+}
+
+.resourceTable th:first-child,
+.resourceTable td:first-child {
+  padding-inline-start: var(--spacing-10) !important;
+}
+
+.resourceTable th:first-child > *,
+.resourceTable td:first-child > * {
+  margin-inline-start: var(--spacing-1);
+}
+
+.resourceTable .astryx-table-header-cell:last-child,
+.resourceTable .astryx-table-cell:last-child {
+  padding-inline-end: var(--spacing-5) !important;
+}
+
+.filterField {
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
+  max-width: 18rem;
+}
+
+.tableTitle {
+  min-height: 4.75rem;
+  padding: var(--spacing-4);
+}
+
+.primaryCellText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tableText {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagList,
+.tableActions {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.tagList {
+  align-items: center;
+  overflow: hidden;
+}
+
+.tagList .astryx-token,
+.tagMoreButton {
+  flex: 0 0 auto;
+}
+
+.tagMoreButton {
+  block-size: calc(var(--size-element-sm) - var(--spacing-2)) !important;
+  min-block-size: calc(var(--size-element-sm) - var(--spacing-2)) !important;
+  padding-block: var(--spacing-0) !important;
+  padding-inline: var(--spacing-2) !important;
+  border-radius: var(--radius-inner) !important;
+  background-color: var(--color-background-gray) !important;
+  color: var(--color-text-gray) !important;
+  font-size: var(--text-supporting-size) !important;
+  line-height: var(--text-supporting-leading) !important;
+  font-weight: var(--font-weight-medium) !important;
+  gap: var(--spacing-1) !important;
+}
+
+.paginationBar {
+  min-height: 3.75rem;
+  padding: var(--spacing-3) var(--spacing-4);
+}
+
+.dialogFrame {
+  display: flex !important;
+  flex-direction: column !important;
+  inline-size: 100%;
+  max-block-size: 100%;
+  overflow: hidden;
+}
+
+.formDialog {
+  block-size: min(82dvh, 46rem);
+}
+
+.dialogHeader {
+  flex: 0 0 auto;
+  padding: var(--spacing-5) var(--spacing-5) var(--spacing-4);
+  border-bottom: thin solid var(--color-border);
+  background: var(--color-background-surface);
+}
+
+.dialogContent {
+  padding: var(--spacing-4) var(--spacing-5);
+}
+
+.dialogScrollArea {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  margin: 0;
+  padding-block: var(--spacing-6);
+  padding-inline-start: var(--spacing-6);
+  padding-inline-end: var(--spacing-10);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.dialogScrollArea::-webkit-scrollbar {
+  inline-size: var(--spacing-2);
+}
+
+.dialogScrollArea::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-full);
+  background: var(--color-border-emphasized);
+}
+
+.dialogFooter {
+  flex: 0 0 auto;
+  padding: var(--spacing-4) var(--spacing-5) var(--spacing-5);
+  border-top: thin solid var(--color-border);
+  background: var(--color-background-surface);
+}
+
+.emptyState {
+  min-height: 18rem;
+  padding: var(--spacing-10);
+}
+
+.dashboardMetricGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+}
+
+.dashboardPanelGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+}
+
+.userCenterPage {
+  inline-size: 100%;
+  max-inline-size: 88rem;
+  margin-inline: auto;
+}
+
+.profileHero,
+.userCenterMainGrid,
+.userCenterPrimaryColumn,
+.userCenterSideColumn {
+  min-width: 0;
+}
+
+.profileIdentity,
+.profileActions {
+  min-width: 0;
+}
+
+.userCenterMainGrid {
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.44fr);
+}
+
+.profileDetailItem {
+  min-width: 0;
+}
+
+.listHeader {
+  min-height: 4.5rem;
+  padding: var(--spacing-4);
+}
+
+.trendChart {
+  min-height: 18rem;
+  padding-block: var(--spacing-3);
+}
+
+.trendBars {
+  height: 14rem;
+}
+
+.trendValue,
+.trendTarget {
+  display: block;
+  inline-size: clamp(0.625rem, 1vw, 0.875rem);
+  min-height: 0.75rem;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.trendValue {
+  background: var(--color-accent);
+}
+
+.trendTarget {
+  background: var(--color-background-muted);
+  border: thin solid var(--color-border);
+}
+
+@media (max-width: 47.5rem) {
+  .appHeader {
+    align-items: flex-start;
+    padding: var(--spacing-3);
+  }
+
+  .pageContent {
+    padding: var(--spacing-3);
+  }
+
+  .trendChart {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 64rem) {
+  .userCenterMainGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 8rem) {
+  .accountDock {
+    display: flex;
+    justify-content: center;
+  }
+
+  .accountSummary {
+    justify-content: center;
+    padding: var(--spacing-0);
+    background: transparent;
+  }
+
+  .accountAvatar,
+  .accountDetails {
+    display: none;
+  }
+}
