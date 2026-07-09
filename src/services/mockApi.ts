@@ -21,8 +21,8 @@ import type {
 } from '../types';
 
 const store: Record<string, AdminRecord[]> = structuredClone(resourceRecords);
-const SESSION_STORAGE_KEY = 'astryx-demo-session';
-const AUTH_USERS_STORAGE_KEY = 'astryx-demo-auth-users';
+const SESSION_STORAGE_KEY = 'kumo-demo-session';
+const AUTH_USERS_STORAGE_KEY = 'kumo-demo-auth-users';
 const authStore: AuthUser[] = readAuthUsers();
 let notificationStore: AppNotification[] = structuredClone(notifications);
 let userCenterStore: UserCenterData = structuredClone(userCenterData);

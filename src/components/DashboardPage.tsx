@@ -1,52 +1,61 @@
 import {useEffect, useState} from 'react';
-import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {Divider} from '@astryxdesign/core/Divider';
-import {Grid} from '@astryxdesign/core/Grid';
-import {Heading, Text} from '@astryxdesign/core/Text';
-import {HStack, StackItem, VStack} from '@astryxdesign/core/Stack';
-import {ProgressBar} from '@astryxdesign/core/ProgressBar';
-import {StatusDot} from '@astryxdesign/core/StatusDot';
-import {Token} from '@astryxdesign/core/Token';
-import {Icon} from '@astryxdesign/core/Icon';
-import {ArrowPathIcon} from '@heroicons/react/24/outline';
+import {Badge} from '@cloudflare/kumo/components/badge';
+import {Button} from '@cloudflare/kumo/components/button';
+import {LayerCard} from '@cloudflare/kumo/components/layer-card';
+import {Meter} from '@cloudflare/kumo/components/meter';
+import {Text} from '@cloudflare/kumo/components/text';
+import {ArrowClockwise} from '@phosphor-icons/react';
 import {mockApi} from '../services/mockApi';
-import type {DashboardData, DashboardMetric} from '../types';
+import type {DashboardData, DashboardMetric, StatusTone} from '../types';
+import {Card, PageTitle, SectionTitle, StatusBadge, colorToBadgeVariant} from './kumo-ui';
 
 function MetricCard({metric}: {metric: DashboardMetric}) {
-  const color = metric.tone === 'negative' ? 'red' : metric.tone === 'positive' ? 'green' : 'blue';
+  const variant = metric.tone === 'negative' ? 'error' : metric.tone === 'positive' ? 'success' : 'info';
   return (
     <Card>
-      <VStack gap={2}>
-        <Text type="supporting" color="secondary">{metric.label}</Text>
-        <HStack hAlign="between" vAlign="end">
-          <Heading level={2}>{metric.value}</Heading>
-          <Token label={metric.delta} color={color} size="sm" />
-        </HStack>
-      </VStack>
+      <div className="flex flex-col gap-3">
+        <Text variant="secondary" size="sm">{metric.label}</Text>
+        <div className="flex items-end justify-between gap-3">
+          <Text variant="heading2" as="p">{metric.value}</Text>
+          <Badge variant={variant}>{metric.delta}</Badge>
+        </div>
+      </div>
     </Card>
   );
 }
 
 function TrendBars({data}: {data: DashboardData['trend']}) {
   return (
-    <HStack gap={3} vAlign="end" className="trendChart">
+    <div className="grid h-56 grid-cols-12 items-end gap-3 px-1 pt-2">
       {data.map(point => (
-        <VStack key={point.label} gap={2} hAlign="center" className="trendColumn">
-          <HStack gap={1} vAlign="end" className="trendBars">
-            <span className="trendTarget" style={{height: `${point.target}%`}} />
-            <span className="trendValue" style={{height: `${point.value}%`}} />
-          </HStack>
-          <Text type="supporting" color="secondary">{point.label}</Text>
-        </VStack>
+        <div key={point.label} className="flex min-w-0 flex-col items-center gap-2">
+          <div className="flex h-40 items-end gap-1">
+            <span className="trend-bar-target" style={{height: `${point.target}%`}} />
+            <span className="trend-bar-value" style={{height: `${point.value}%`}} />
+          </div>
+          <Text variant="secondary" size="sm" as="span">{point.label}</Text>
+        </div>
       ))}
-    </HStack>
+    </div>
   );
+}
+
+function activityTone(status: StatusTone) {
+  if (status === 'accent') return 'info';
+  return status;
 }
 
 export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const loadDashboard = () => {
+    setIsLoading(true);
+    mockApi.getDashboard().then(next => {
+      setData(next);
+      setIsLoading(false);
+    });
+  };
 
   useEffect(() => {
     let mounted = true;
@@ -65,84 +74,80 @@ export function DashboardPage() {
   if (!data) {
     return (
       <Card>
-        <Text type="body">{isLoading ? '正在加载工作台...' : '暂无工作台数据'}</Text>
+        <Text>{isLoading ? '正在加载工作台...' : '暂无工作台数据'}</Text>
       </Card>
     );
   }
 
   return (
-    <VStack gap={6}>
-      <HStack hAlign="between" vAlign="center" wrap="wrap">
-        <Heading level={1}>首页</Heading>
-        <Button
-          label="刷新数据"
-          variant="secondary"
-          icon={<Icon icon={ArrowPathIcon} size="sm" />}
-          isLoading={isLoading}
-          onClick={() => {
-            setIsLoading(true);
-            mockApi.getDashboard().then(next => {
-              setData(next);
-              setIsLoading(false);
-            });
-          }}
-        />
-      </HStack>
+    <div className="flex flex-col gap-6">
+      <PageTitle
+        title="首页"
+        actions={
+          <Button
+            variant="secondary"
+            icon={ArrowClockwise}
+            loading={isLoading}
+            onClick={loadDashboard}
+          >
+            刷新数据
+          </Button>
+        }
+      />
 
-      <Grid className="dashboardMetricGrid" gap={4}>
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {data.metrics.map(metric => <MetricCard key={metric.label} metric={metric} />)}
-      </Grid>
+      </section>
 
-      <Grid className="dashboardPanelGrid" gap={4}>
-        <Card>
-          <VStack gap={5}>
-            <HStack hAlign="between" vAlign="center">
-              <Heading level={3}>近 12 月业务趋势</Heading>
-              <Token label="12 个月" color="blue" size="sm" />
-            </HStack>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
+        <LayerCard className="min-w-0">
+          <LayerCard.Secondary>
+            <SectionTitle title="近 12 月业务趋势" aside={<Badge variant="blue">12 个月</Badge>} />
+          </LayerCard.Secondary>
+          <LayerCard.Primary>
             <TrendBars data={data.trend} />
-          </VStack>
-        </Card>
+          </LayerCard.Primary>
+        </LayerCard>
 
-        <Card>
-          <VStack gap={5}>
-            <Heading level={3}>模块占比</Heading>
-            {data.modules.map(item => (
-              <VStack key={item.label} gap={2}>
-                <HStack hAlign="between" vAlign="center">
-                  <Text type="body">{item.label}</Text>
-                  <Token label={`${item.value}%`} color={item.color ?? 'gray'} size="sm" />
-                </HStack>
-                <ProgressBar value={item.value} max={item.capacity} label={`${item.label} 容量`} isLabelHidden />
-              </VStack>
-            ))}
-          </VStack>
-        </Card>
-      </Grid>
+        <LayerCard className="min-w-0">
+          <LayerCard.Secondary>
+            <SectionTitle title="模块占比" />
+          </LayerCard.Secondary>
+          <LayerCard.Primary>
+            <div className="flex flex-col gap-4">
+              {data.modules.map(item => (
+                <div key={item.label} className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <Text as="span">{item.label}</Text>
+                    <Badge variant={colorToBadgeVariant(item.color)}>{item.value}%</Badge>
+                  </div>
+                  <Meter label={`${item.label} 容量`} value={item.value} max={item.capacity} showValue={false} />
+                </div>
+              ))}
+            </div>
+          </LayerCard.Primary>
+        </LayerCard>
+      </section>
 
       <Card>
-        <VStack gap={4}>
-          <HStack hAlign="between" vAlign="center">
-            <Heading level={3}>系统动态</Heading>
-            <Text type="supporting" color="secondary">最近更新</Text>
-          </HStack>
-          <Divider />
-          {data.activities.map(activity => (
-            <HStack key={activity.id} gap={3} vAlign="start">
-              <StatusDot variant={activity.status} label={activity.title} tooltip={activity.title} />
-              <StackItem size="fill">
-                <VStack gap={0.5}>
-                  <HStack hAlign="between" vAlign="center" wrap="wrap">
-                    <Text type="body">{activity.title}</Text>
-                    <Text type="supporting" color="secondary">{activity.time}</Text>
-                  </HStack>
-                  <Text type="supporting" color="secondary">{activity.description}</Text>
-                </VStack>
-              </StackItem>
-            </HStack>
-          ))}
-        </VStack>
+        <div className="flex flex-col gap-4">
+          <SectionTitle title="系统动态" aside={<Text variant="secondary" size="sm">最近更新</Text>} />
+          <div className="divide-y divide-kumo-line">
+            {data.activities.map(activity => (
+              <div key={activity.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">
+                <StatusBadge tone={activityTone(activity.status)}>{activity.title}</StatusBadge>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Text as="span" bold>{activity.title}</Text>
+                    <Text variant="secondary" size="sm" as="time">{activity.time}</Text>
+                  </div>
+                  <Text variant="secondary" size="sm">{activity.description}</Text>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </Card>
-    </VStack>
+    </div>
   );
 }

@@ -1,12 +1,11 @@
 {
-  "name": "astryxdesign-demo",
+  "name": "kumo-admin-demo",
   "version": "1.0.0",
-  "description": "Mock-driven extensible admin framework built with Astryx Design.",
+  "description": "Mock-driven extensible admin framework built with Cloudflare Kumo.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && vite build",
-    "preview": "vite preview",
-    "astryx": "astryx"
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
@@ -21,17 +20,19 @@
   },
   "homepage": "https://github.com/occva/astryxdesign-demo#readme",
   "dependencies": {
-    "@astryxdesign/cli": "^0.1.3",
-    "@astryxdesign/core": "^0.1.3",
-    "@astryxdesign/theme-neutral": "^0.1.3",
-    "@heroicons/react": "^2.2.0",
+    "@cloudflare/kumo": "^2.7.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "echarts": "^6.1.0",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.3.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "tailwindcss": "^4.3.2",
     "typescript": "^5.9.3",
     "vite": "^7.3.6"
   }

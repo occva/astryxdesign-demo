@@ -1,5 +1,3 @@
-import type {StatusDotVariant} from '@astryxdesign/core/StatusDot';
-
 export type PageId = 'dashboard' | string;
 
 export type IconKey =
@@ -29,8 +27,10 @@ export type SelectOption = {
   label: string;
   value: string;
   color?: 'default' | 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'cyan' | 'blue' | 'purple' | 'pink' | 'gray';
-  status?: StatusDotVariant;
+  status?: StatusTone;
 };
+
+export type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'error' | 'accent';
 
 export type ResourceField = {
   key: string;
@@ -132,7 +132,7 @@ export type DashboardActivity = {
   title: string;
   description: string;
   time: string;
-  status: StatusDotVariant;
+  status: StatusTone;
 };
 
 export type DashboardData = {

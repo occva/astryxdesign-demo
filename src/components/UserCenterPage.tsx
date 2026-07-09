@@ -1,39 +1,182 @@
 import {useEffect, useState} from 'react';
-import {Avatar} from '@astryxdesign/core/Avatar';
-import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {Dialog} from '@astryxdesign/core/Dialog';
-import {Divider} from '@astryxdesign/core/Divider';
-import {Grid} from '@astryxdesign/core/Grid';
-import {Icon} from '@astryxdesign/core/Icon';
-import {Selector} from '@astryxdesign/core/Selector';
-import {Switch} from '@astryxdesign/core/Switch';
-import {TextInput} from '@astryxdesign/core/TextInput';
-import {Heading, Text} from '@astryxdesign/core/Text';
-import {HStack, StackItem, VStack} from '@astryxdesign/core/Stack';
-import {Token} from '@astryxdesign/core/Token';
+import {Banner} from '@cloudflare/kumo/components/banner';
+import {Button} from '@cloudflare/kumo/components/button';
+import {Dialog} from '@cloudflare/kumo/components/dialog';
+import {Switch} from '@cloudflare/kumo/components/switch';
+import {Text} from '@cloudflare/kumo/components/text';
 import {
-  BuildingOffice2Icon,
-  EnvelopeIcon,
-  IdentificationIcon,
-  PencilSquareIcon,
-  PhoneIcon,
-  ShieldCheckIcon,
-} from '@heroicons/react/24/outline';
+  Buildings,
+  EnvelopeSimple,
+  IdentificationCard,
+  PencilSimpleLine,
+  Phone,
+  ShieldCheck,
+} from '@phosphor-icons/react';
 import {mockApi} from '../services/mockApi';
 import type {SecuritySetting, UserCenterData, UserProfile} from '../types';
+import {
+  Avatar,
+  Card,
+  FormInput,
+  FormSelect,
+  PageTitle,
+  SectionTitle,
+  StatusBadge,
+  colorToBadgeVariant,
+} from './kumo-ui';
+import {Badge} from '@cloudflare/kumo/components/badge';
 
 function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
   return (
-    <Grid columns={{minWidth: 180}} gap={4}>
+    <dl className="grid gap-4 sm:grid-cols-2">
       {items.map(item => (
-        <VStack key={item.label} gap={0.5} className="profileDetailItem">
-          <Text type="supporting" color="secondary">{item.label}</Text>
-          <Text type="body">{item.value}</Text>
-        </VStack>
+        <div key={item.label} className="min-w-0">
+          <Text as="dt" variant="secondary" size="sm">{item.label}</Text>
+          <Text as="dd" truncate>{item.value}</Text>
+        </div>
       ))}
-    </Grid>
+    </dl>
+  );
+}
+
+function ProfileDialog({
+  open,
+  profileDraft,
+  data,
+  message,
+  isSaving,
+  onOpenChange,
+  onDraftChange,
+  onSave,
+}: {
+  open: boolean;
+  profileDraft: UserProfile | null;
+  data: UserCenterData;
+  message: string | null;
+  isSaving: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDraftChange: (profile: UserProfile) => void;
+  onSave: () => void;
+}) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
+        <div className="flex flex-col gap-5">
+          <Dialog.Title>编辑资料</Dialog.Title>
+          {profileDraft ? (
+            <>
+              {message ? <Banner variant="error" title={message} /> : null}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <FormInput
+                  label="姓名"
+                  value={profileDraft.name}
+                  required
+                  onValueChange={name => onDraftChange({...profileDraft, name})}
+                />
+                <FormInput
+                  label="岗位"
+                  value={profileDraft.title}
+                  onValueChange={title => onDraftChange({...profileDraft, title})}
+                />
+                <FormInput
+                  label="所属部门"
+                  value={profileDraft.department}
+                  onValueChange={department => onDraftChange({...profileDraft, department})}
+                />
+                <FormInput
+                  label="直属上级"
+                  value={profileDraft.manager}
+                  onValueChange={manager => onDraftChange({...profileDraft, manager})}
+                />
+                <FormInput
+                  label="邮箱"
+                  value={profileDraft.email}
+                  type="email"
+                  onValueChange={email => onDraftChange({...profileDraft, email})}
+                />
+                <FormInput
+                  label="手机号"
+                  value={profileDraft.phone}
+                  onValueChange={phone => onDraftChange({...profileDraft, phone})}
+                />
+                <FormInput
+                  label="办公地点"
+                  value={profileDraft.location}
+                  onValueChange={location => onDraftChange({...profileDraft, location})}
+                />
+                <FormSelect
+                  label="当前状态"
+                  value={profileDraft.status}
+                  options={data.statusOptions}
+                  onValueChange={status => onDraftChange({...profileDraft, status})}
+                />
+              </div>
+            </>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>取消</Button>
+            <Button variant="primary" loading={isSaving} onClick={onSave}>保存</Button>
+          </div>
+        </div>
+      </Dialog>
+    </Dialog.Root>
+  );
+}
+
+function SecurityDialog({
+  open,
+  data,
+  message,
+  savingSecurityKey,
+  onOpenChange,
+  onMessageDismiss,
+  onToggle,
+}: {
+  open: boolean;
+  data: UserCenterData;
+  message: string | null;
+  savingSecurityKey: SecuritySetting['key'] | null;
+  onOpenChange: (open: boolean) => void;
+  onMessageDismiss: () => void;
+  onToggle: (setting: SecuritySetting, value: boolean) => void;
+}) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog size="lg" className="p-6">
+        <div className="flex flex-col gap-5">
+          <Dialog.Title>安全设置</Dialog.Title>
+          {message ? (
+            <Banner
+              variant="error"
+              title={message}
+              action={<Button size="sm" variant="secondary" onClick={onMessageDismiss}>关闭</Button>}
+            />
+          ) : null}
+          <div className="flex flex-col gap-4">
+            {data.securitySettings.map(setting => (
+              <div key={setting.key} className="rounded-lg border border-kumo-line p-4">
+                <Switch
+                  label={
+                    <span className="flex flex-col gap-1">
+                      <span>{setting.label}</span>
+                      <Text as="span" variant="secondary" size="sm">{setting.description}</Text>
+                    </span>
+                  }
+                  checked={setting.value}
+                  transitioning={savingSecurityKey === setting.key}
+                  disabled={savingSecurityKey !== null && savingSecurityKey !== setting.key}
+                  controlFirst={false}
+                  onCheckedChange={value => onToggle(setting, value)}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={() => onOpenChange(false)}>完成</Button>
+          </div>
+        </div>
+      </Dialog>
+    </Dialog.Root>
   );
 }
 
@@ -72,7 +215,7 @@ export function UserCenterPage() {
   if (!data) {
     return (
       <Card>
-        <Text type="body">正在加载用户中心...</Text>
+        <Text>正在加载用户中心...</Text>
       </Card>
     );
   }
@@ -118,228 +261,111 @@ export function UserCenterPage() {
     }
   };
 
-  const profileStatusColor = data.profile.status === '离线待命' ? 'gray' : data.profile.status === '忙碌处理中' ? 'orange' : 'green';
+  const profileStatusTone = data.profile.status === '离线待命'
+    ? 'neutral'
+    : data.profile.status === '忙碌处理中'
+      ? 'warning'
+      : 'success';
 
   return (
-    <VStack gap={5} className="userCenterPage">
-      <Card className="profileHero">
-        <HStack hAlign="between" vAlign="center" wrap="wrap" gap={5}>
-          <HStack gap={4} vAlign="center" className="profileIdentity">
-            <Avatar name={data.profile.name} size="large" />
-            <VStack gap={1}>
-              <HStack gap={2} vAlign="center" wrap="wrap">
-                <Heading level={1}>{data.profile.name}</Heading>
-                <Token label={data.profile.status} color={profileStatusColor} size="sm" />
-              </HStack>
-              <Text type="body" color="secondary">
+    <div className="flex flex-col gap-5">
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-5">
+          <div className="flex min-w-0 items-center gap-4">
+            <Avatar name={data.profile.name} size="lg" />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Text variant="heading1" as="h1">{data.profile.name}</Text>
+                <StatusBadge tone={profileStatusTone}>{data.profile.status}</StatusBadge>
+              </div>
+              <Text variant="secondary">
                 {data.profile.title} · {data.profile.department} · {data.profile.employeeId}
               </Text>
-              <HStack gap={2} wrap="wrap">
-                <Token label={data.profile.account} color="gray" size="sm" />
-                <Token label={data.profile.email} color="blue" size="sm" />
-                <Token label={data.profile.location} color="gray" size="sm" />
-              </HStack>
-            </VStack>
-          </HStack>
-          <HStack gap={2} vAlign="center" className="profileActions">
-            <Button
-              label="编辑资料"
-              variant="secondary"
-              icon={<Icon icon={PencilSquareIcon} size="sm" />}
-              onClick={openProfileDialog}
-            />
-            <Button
-              label="安全设置"
-              icon={<Icon icon={ShieldCheckIcon} size="sm" />}
-              onClick={() => setIsSecurityDialogOpen(true)}
-            />
-          </HStack>
-        </HStack>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Badge variant="neutral">{data.profile.account}</Badge>
+                <Badge variant="blue">{data.profile.email}</Badge>
+                <Badge variant="neutral">{data.profile.location}</Badge>
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="secondary" icon={PencilSimpleLine} onClick={openProfileDialog}>编辑资料</Button>
+            <Button variant="primary" icon={ShieldCheck} onClick={() => setIsSecurityDialogOpen(true)}>安全设置</Button>
+          </div>
+        </div>
       </Card>
 
-      <Grid gap={4} align="start" className="userCenterMainGrid">
-        <VStack gap={4} className="userCenterPrimaryColumn">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.45fr)]">
+        <div className="flex flex-col gap-4">
           <Card>
-            <VStack gap={4}>
-              <HStack gap={3} vAlign="center">
-                <Icon icon={IdentificationIcon} size="md" />
-                <VStack gap={0}>
-                  <Heading level={3}>基本资料</Heading>
-                </VStack>
-              </HStack>
-              <Divider />
+            <div className="flex flex-col gap-4">
+              <SectionTitle title={<span className="inline-flex items-center gap-2"><IdentificationCard className="size-5" />基本资料</span>} />
               <DetailGrid items={data.personalDetails} />
-            </VStack>
+            </div>
           </Card>
 
           <Card>
-            <VStack gap={4}>
-              <HStack gap={3} vAlign="center">
-                <Icon icon={PhoneIcon} size="md" />
-                <VStack gap={0}>
-                  <Heading level={3}>联系方式</Heading>
-                </VStack>
-              </HStack>
-              <Divider />
+            <div className="flex flex-col gap-4">
+              <SectionTitle title={<span className="inline-flex items-center gap-2"><Phone className="size-5" />联系方式</span>} />
               <DetailGrid items={data.contactDetails} />
-              <HStack gap={2} wrap="wrap">
+              <div className="flex flex-wrap gap-2">
                 <Button
-                  label="发送邮件"
                   variant="secondary"
-                  icon={<Icon icon={EnvelopeIcon} size="sm" />}
+                  icon={EnvelopeSimple}
                   onClick={() => {
                     window.location.href = `mailto:${data.profile.email}`;
                   }}
-                />
+                >
+                  发送邮件
+                </Button>
                 <Button
-                  label="拨打电话"
                   variant="secondary"
-                  icon={<Icon icon={PhoneIcon} size="sm" />}
+                  icon={Phone}
                   onClick={() => {
                     window.location.href = `tel:${data.profile.phone.replace(/\s/g, '')}`;
                   }}
-                />
-              </HStack>
-            </VStack>
+                >
+                  拨打电话
+                </Button>
+              </div>
+            </div>
           </Card>
-        </VStack>
+        </div>
 
-        <VStack gap={4} className="userCenterSideColumn">
-          <Card>
-            <VStack gap={4}>
-              <HStack gap={3} vAlign="center">
-                <Icon icon={BuildingOffice2Icon} size="md" />
-                <VStack gap={0}>
-                  <Heading level={3}>组织身份</Heading>
-                </VStack>
-              </HStack>
-              <Divider />
-              <DetailGrid items={data.organizationDetails} />
-              <HStack gap={2} wrap="wrap">
-                <Token label={data.profile.role} color="purple" size="sm" />
-                <Token label={data.profile.department} color="blue" size="sm" />
-              </HStack>
-            </VStack>
-          </Card>
-        </VStack>
-      </Grid>
+        <Card>
+          <div className="flex flex-col gap-4">
+            <SectionTitle title={<span className="inline-flex items-center gap-2"><Buildings className="size-5" />组织身份</span>} />
+            <DetailGrid items={data.organizationDetails} />
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="purple">{data.profile.role}</Badge>
+              <Badge variant={colorToBadgeVariant('blue')}>{data.profile.department}</Badge>
+            </div>
+          </div>
+        </Card>
+      </div>
 
-      <Dialog
-        isOpen={isProfileDialogOpen}
-        onOpenChange={open => !open && setIsProfileDialogOpen(false)}
-        width="min(45rem, calc(100vw - var(--spacing-12)))"
-        maxHeight="min(82dvh, 46rem)"
-        padding={0}
-        purpose="form"
-      >
-        <VStack gap={0} className="dialogFrame formDialog">
-          <StackItem className="dialogHeader">
-            <Heading level={2}>编辑资料</Heading>
-          </StackItem>
-          <StackItem size="fill" className="dialogScrollArea">
-            {profileDraft ? (
-              <VStack gap={4}>
-                {profileMessage ? (
-                  <Banner status="error" title={profileMessage} container="card" />
-                ) : null}
-                <Grid columns={{minWidth: 220}} gap={4}>
-                  <TextInput
-                    label="姓名"
-                    value={profileDraft.name}
-                    isRequired
-                    onChange={name => setProfileDraft(current => current ? {...current, name} : current)}
-                  />
-                  <TextInput
-                    label="岗位"
-                    value={profileDraft.title}
-                    onChange={title => setProfileDraft(current => current ? {...current, title} : current)}
-                  />
-                  <TextInput
-                    label="所属部门"
-                    value={profileDraft.department}
-                    onChange={department => setProfileDraft(current => current ? {...current, department} : current)}
-                  />
-                  <TextInput
-                    label="直属上级"
-                    value={profileDraft.manager}
-                    onChange={manager => setProfileDraft(current => current ? {...current, manager} : current)}
-                  />
-                  <TextInput
-                    label="邮箱"
-                    value={profileDraft.email}
-                    type="email"
-                    onChange={email => setProfileDraft(current => current ? {...current, email} : current)}
-                  />
-                  <TextInput
-                    label="手机号"
-                    value={profileDraft.phone}
-                    onChange={phone => setProfileDraft(current => current ? {...current, phone} : current)}
-                  />
-                  <TextInput
-                    label="办公地点"
-                    value={profileDraft.location}
-                    onChange={location => setProfileDraft(current => current ? {...current, location} : current)}
-                  />
-                  <Selector
-                    label="当前状态"
-                    value={profileDraft.status}
-                    options={data.statusOptions}
-                    onChange={status => setProfileDraft(current => current ? {...current, status} : current)}
-                  />
-                </Grid>
-              </VStack>
-            ) : null}
-          </StackItem>
-          <HStack hAlign="end" gap={2} className="dialogFooter">
-            <Button label="取消" variant="secondary" onClick={() => setIsProfileDialogOpen(false)} />
-            <Button label="保存" isLoading={isProfileSaving} onClick={saveProfile} />
-          </HStack>
-        </VStack>
-      </Dialog>
+      <ProfileDialog
+        open={isProfileDialogOpen}
+        profileDraft={profileDraft}
+        data={data}
+        message={profileMessage}
+        isSaving={isProfileSaving}
+        onOpenChange={setIsProfileDialogOpen}
+        onDraftChange={setProfileDraft}
+        onSave={saveProfile}
+      />
 
-      <Dialog
-        isOpen={isSecurityDialogOpen}
-        onOpenChange={open => !open && setIsSecurityDialogOpen(false)}
-        width="min(32.5rem, calc(100vw - var(--spacing-12)))"
-        maxHeight="min(82dvh, 46rem)"
-        padding={0}
-        purpose="form"
-      >
-        <VStack gap={0} className="dialogFrame">
-          <StackItem className="dialogHeader">
-            <Heading level={2}>安全设置</Heading>
-          </StackItem>
-          <StackItem className="dialogContent">
-            <VStack gap={4}>
-              {securityMessage ? (
-                <Banner
-                  status="error"
-                  title={securityMessage}
-                  container="card"
-                  isDismissable
-                  onDismiss={() => setSecurityMessage(null)}
-                />
-              ) : null}
-              {data.securitySettings.map(setting => (
-                <Switch
-                  key={setting.key}
-                  label={setting.label}
-                  value={setting.value}
-                  isLoading={savingSecurityKey === setting.key}
-                  isDisabled={savingSecurityKey !== null && savingSecurityKey !== setting.key}
-                  labelSpacing="spread"
-                  onChange={value => {
-                    void updateSecuritySetting(setting, value);
-                  }}
-                />
-              ))}
-            </VStack>
-          </StackItem>
-          <HStack hAlign="end" gap={2} className="dialogFooter">
-            <Button label="完成" onClick={() => setIsSecurityDialogOpen(false)} />
-          </HStack>
-        </VStack>
-      </Dialog>
-    </VStack>
+      <SecurityDialog
+        open={isSecurityDialogOpen}
+        data={data}
+        message={securityMessage}
+        savingSecurityKey={savingSecurityKey}
+        onOpenChange={setIsSecurityDialogOpen}
+        onMessageDismiss={() => setSecurityMessage(null)}
+        onToggle={(setting, value) => {
+          void updateSecuritySetting(setting, value);
+        }}
+      />
+    </div>
   );
 }

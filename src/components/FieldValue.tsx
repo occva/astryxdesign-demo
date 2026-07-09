@@ -1,27 +1,26 @@
-import {HStack, VStack} from '@astryxdesign/core/Stack';
-import {Text} from '@astryxdesign/core/Text';
-import {Token} from '@astryxdesign/core/Token';
-import {DropdownMenu} from '@astryxdesign/core/DropdownMenu';
-import {StatusDot} from '@astryxdesign/core/StatusDot';
-import {ProgressBar} from '@astryxdesign/core/ProgressBar';
-import type {ResourceField} from '../types';
+import {Badge} from '@cloudflare/kumo/components/badge';
+import {Meter} from '@cloudflare/kumo/components/meter';
+import {Popover} from '@cloudflare/kumo/components/popover';
+import {Text} from '@cloudflare/kumo/components/text';
+import {colorToBadgeVariant, StatusBadge} from './kumo-ui';
+import type {ResourceField, StatusTone} from '../types';
 
 function optionFor(field: ResourceField, value: unknown) {
   return field.options?.find(option => option.value === String(value));
+}
+
+function toneFor(status?: StatusTone) {
+  if (status === 'accent') return 'info';
+  return status ?? 'neutral';
 }
 
 export function FieldValue({field, value}: {field: ResourceField; value: unknown}) {
   if (field.kind === 'status') {
     const option = optionFor(field, value);
     return (
-      <HStack gap={2} vAlign="center">
-        <StatusDot
-          variant={option?.status ?? 'neutral'}
-          label={option?.label ?? String(value)}
-          tooltip={option?.label ?? String(value)}
-        />
-        <Text type="body">{option?.label ?? String(value)}</Text>
-      </HStack>
+      <StatusBadge tone={toneFor(option?.status)}>
+        {option?.label ?? String(value)}
+      </StatusBadge>
     );
   }
 
@@ -31,57 +30,66 @@ export function FieldValue({field, value}: {field: ResourceField; value: unknown
     const hiddenCount = Math.max(tags.length - visibleTags.length, 0);
 
     return (
-      <HStack gap={1} className="tagList">
+      <div className="flex min-w-0 items-center gap-1 whitespace-nowrap">
         {visibleTags.map(tag => (
-          <Token key={tag} label={tag} size="sm" color="gray" />
+          <Badge key={tag} variant="secondary">{tag}</Badge>
         ))}
         {hiddenCount > 0 ? (
-          <DropdownMenu
-            button={{
-              label: `+${hiddenCount}`,
-              size: 'sm',
-              variant: 'secondary',
-              tooltip: '查看全部标签',
-              className: 'tagMoreButton',
-            }}
-            hasChevron={false}
-            items={[
-              {
-                type: 'section',
-                title: '全部标签',
-                items: tags.map(tag => ({label: tag})),
-              },
-            ]}
-          />
+          <Popover>
+            <Popover.Trigger
+              render={
+                <button
+                  className="inline-flex rounded-full"
+                  type="button"
+                  aria-label={`查看全部${tags.length}个标签`}
+                >
+                  <Badge variant="secondary">+{hiddenCount}</Badge>
+                </button>
+              }
+            />
+            <Popover.Content side="top" align="start" positionMethod="fixed" className="max-w-72">
+              <div className="flex flex-wrap gap-1">
+                {tags.map(tag => (
+                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                ))}
+              </div>
+            </Popover.Content>
+          </Popover>
         ) : null}
-      </HStack>
+      </div>
     );
   }
 
   if (field.kind === 'progress') {
     const progress = Number(value) || 0;
     return (
-      <VStack gap={1}>
-        <ProgressBar value={progress} max={100} label={`${field.label} ${progress}%`} isLabelHidden />
-        <Text type="supporting" color="secondary">
-          {progress}%
-        </Text>
-      </VStack>
+      <div className="min-w-32">
+        <Meter label={`${field.label} ${progress}%`} value={progress} showValue={false} />
+        <Text variant="secondary" size="sm">{progress}%</Text>
+      </div>
     );
   }
 
   if (field.kind === 'currency') {
-    return <Text type="body">¥{Number(value).toLocaleString('zh-CN')}</Text>;
+    return <Text as="span">¥{Number(value).toLocaleString('zh-CN')}</Text>;
   }
 
   if (field.kind === 'date') {
     const text = String(value ?? '');
-    return <span className="tableText dateCell" title={text}>{text.slice(0, 10)}</span>;
+    return (
+      <Text as="span" truncate title={text}>
+        {text.slice(0, 10)}
+      </Text>
+    );
   }
 
   if (field.kind === 'select') {
-    return <Text type="body">{optionFor(field, value)?.label ?? String(value ?? '')}</Text>;
+    const option = optionFor(field, value);
+    if (option?.color) {
+      return <Badge variant={colorToBadgeVariant(option.color)}>{option.label}</Badge>;
+    }
+    return <Text as="span">{option?.label ?? String(value ?? '')}</Text>;
   }
 
-  return <Text type="body">{String(value ?? '')}</Text>;
+  return <Text as="span" truncate>{String(value ?? '')}</Text>;
 }
