@@ -17,6 +17,7 @@ import {mockApi} from '../services/mockApi';
 import type {AdminRecord, MockQuery, ResourceField, ResourceSchema} from '../types';
 import {FieldValue} from './FieldValue';
 import {Card, FormInput, FormSelect, PageTitle} from './kumo-ui';
+import {uiCopy, type Locale} from '../localization';
 
 type DialogMode = 'create' | 'edit' | null;
 
@@ -57,12 +58,18 @@ function FormField({
   value,
   onChange,
   error,
+  locale,
 }: {
   field: ResourceField;
   value: unknown;
   onChange: (value: unknown) => void;
   error?: string;
+  locale: Locale;
 }) {
+  const copy = uiCopy[locale].resource;
+  const placeholder = (verb: string) => locale === 'zh'
+    ? `${verb}${field.label}`
+    : `${verb} ${field.label.toLowerCase()}`;
   if (field.kind === 'select' || field.kind === 'status') {
     return (
       <FormSelect
@@ -70,7 +77,7 @@ function FormField({
         value={String(value ?? '')}
         options={(field.options ?? []).map(option => ({label: option.label, value: option.value}))}
         onValueChange={onChange}
-        placeholder={`选择${field.label}`}
+        placeholder={placeholder(copy.select)}
         error={error}
         required={field.required}
       />
@@ -82,7 +89,7 @@ function FormField({
       label={field.label}
       value={String(value ?? '')}
       onValueChange={onChange}
-      placeholder={`输入${field.label}`}
+      placeholder={placeholder(copy.enter)}
       required={field.required}
       error={error}
       type={field.kind === 'email' ? 'email' : 'text'}
@@ -90,11 +97,11 @@ function FormField({
   );
 }
 
-export function ResourcePage({schema}: {schema: ResourceSchema}) {
+export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: Locale}) {
+  const copy = uiCopy[locale].resource;
   const [query, setQuery] = useState<MockQuery>(defaultQuery);
   const [rows, setRows] = useState<AdminRecord[]>([]);
   const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [dialogMode, setDialogMode] = useState<DialogMode>(null);
   const [draft, setDraft] = useState<AdminRecord>(() => emptyRecord(schema));
   const [confirmDelete, setConfirmDelete] = useState<AdminRecord | null>(null);
@@ -111,18 +118,16 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
 
   useEffect(() => {
     let mounted = true;
-    setIsLoading(true);
     mockApi.list(schema.id, query).then(page => {
       if (mounted) {
         setRows(page.items);
         setTotal(page.total);
-        setIsLoading(false);
       }
     });
     return () => {
       mounted = false;
     };
-  }, [schema.id, query]);
+  }, [schema.id, query, locale]);
 
   const filters = useMemo(() => filterFields(schema), [schema]);
   const visibleFields = useMemo(
@@ -131,7 +136,11 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
   );
   const tableMinWidthRem = Math.max(56, visibleFields.length * 8 + 14);
   const primaryFieldLabel =
-    schema.fields.find(field => field.key === schema.primaryField)?.label ?? '名称';
+    schema.fields.find(field => field.key === schema.primaryField)?.label ?? copy.name;
+
+  const fieldPrompt = (verb: string, label: string) => locale === 'zh'
+    ? `${verb}${label}`
+    : `${verb} ${label.toLowerCase()}`;
 
   const refresh = () => setQuery(current => ({...current}));
 
@@ -173,11 +182,11 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
     const errors = Object.fromEntries(
       editableFields(schema)
         .filter(field => field.required && String(draft[field.key] ?? '').trim().length === 0)
-        .map(field => [field.key, `请输入${field.label}`]),
+        .map(field => [field.key, fieldPrompt(copy.enter, field.label)]),
     );
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      setFormMessage('请补全必填项后再保存。');
+      setFormMessage(copy.required);
       return;
     }
 
@@ -197,7 +206,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
       setFormMessage(null);
       refresh();
     } catch (error) {
-      setFormMessage(error instanceof Error ? error.message : '保存失败，请重试。');
+      setFormMessage(error instanceof Error ? error.message : copy.saveFailed);
     } finally {
       setIsSaving(false);
     }
@@ -226,7 +235,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
               disabled={total === 0}
               onClick={exportRows}
             >
-              导出
+              {copy.export}
             </Button>
             <Button
               variant="primary"
@@ -238,7 +247,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                 setDialogMode('create');
               }}
             >
-              新增
+              {copy.addNew}
             </Button>
           </>
         }
@@ -254,7 +263,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                     label={field.label}
                     value={query.filters?.[field.key] ?? ''}
                     options={[
-                      {label: `全部${field.label}`, value: ''},
+                      {label: locale === 'zh' ? `${copy.all}${field.label}` : `${copy.all} ${field.label.toLowerCase()}`, value: ''},
                       ...(field.options ?? []).map(option => ({
                         label: option.label,
                         value: option.value,
@@ -272,14 +281,14 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                   label={field.label}
                   value={query.filters?.[field.key] ?? ''}
                   onValueChange={value => setFilter(field.key, value)}
-                  placeholder={`请输入${field.label}`}
+                  placeholder={fieldPrompt(copy.enter, field.label)}
                   type={field.kind === 'email' ? 'email' : 'text'}
                 />
               </div>
             );
           })}
-          <Button icon={MagnifyingGlass} onClick={refresh}>查询</Button>
-          <Button variant="secondary" onClick={resetFilters}>重置</Button>
+          <Button icon={MagnifyingGlass} onClick={refresh}>{copy.search}</Button>
+          <Button variant="secondary" onClick={resetFilters}>{copy.reset}</Button>
           <Button
             variant="secondary"
             icon={ArrowsDownUp}
@@ -289,32 +298,32 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
               sortDirection: current.sortDirection === 'asc' ? 'desc' : 'asc',
             }))}
           >
-            {primaryFieldLabel}{query.sortDirection === 'asc' ? '升序' : '降序'}
+            {locale === 'zh' ? primaryFieldLabel : `${primaryFieldLabel}: `}
+            {query.sortDirection === 'asc' ? copy.ascending : copy.descending}
           </Button>
         </div>
       </Card>
 
       <Card className="min-w-0 overflow-hidden p-0">
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-          <div>
-            <Text variant="heading3" as="h2">数据列表</Text>
-            <Text variant="secondary" size="sm">
-              {isLoading ? '正在加载...' : `共 ${total} 条记录`}
-            </Text>
-          </div>
-          <Badge variant="secondary">每页 {query.pageSize}</Badge>
-        </div>
         <div className="max-w-full overflow-x-auto border-y border-kumo-line">
           {rows.length > 0 ? (
             <Table style={{minWidth: `${tableMinWidthRem}rem`}}>
-              <Table.Header sticky>
+              <Table.Header
+                sticky
+                className="[&_th]:bg-kumo-elevated [&_th]:shadow-[inset_0_1px_0_var(--color-kumo-line),inset_0_-1px_0_var(--color-kumo-line)]"
+              >
                 <Table.Row>
                   {visibleFields.map(field => (
                     <Table.Head key={field.key} className="whitespace-nowrap">
                       {field.label}
                     </Table.Head>
                   ))}
-                  <Table.Head sticky="right" className="w-36 min-w-36 whitespace-nowrap bg-kumo-base">操作</Table.Head>
+                  <Table.Head
+                    sticky="right"
+                    className="w-36 min-w-36 whitespace-nowrap bg-kumo-elevated before:to-kumo-elevated"
+                  >
+                    {copy.actions}
+                  </Table.Head>
                 </Table.Row>
               </Table.Header>
               <Table.Body>
@@ -325,7 +334,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                         {field.key === schema.primaryField ? (
                           <Text as="span" bold truncate>{String(item[field.key] ?? '')}</Text>
                         ) : (
-                          <FieldValue field={field} value={item[field.key]} />
+                          <FieldValue field={field} value={item[field.key]} locale={locale} />
                         )}
                       </Table.Cell>
                     ))}
@@ -341,7 +350,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                             setDialogMode('edit');
                           }}
                         >
-                          编辑
+                          {copy.edit}
                         </Button>
                         <Button
                           size="sm"
@@ -349,7 +358,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                           icon={Trash}
                           onClick={() => setConfirmDelete(item)}
                         >
-                          删除
+                          {copy.delete}
                         </Button>
                       </div>
                     </Table.Cell>
@@ -359,8 +368,8 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
             </Table>
           ) : (
             <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
-              <Text variant="heading3" as="h2">没有匹配结果</Text>
-              <Text variant="secondary">调整筛选条件后重试。</Text>
+              <Text variant="heading3" as="h2">{copy.noResults}</Text>
+              <Text variant="secondary">{copy.noResultsHint}</Text>
             </div>
           )}
         </div>
@@ -371,26 +380,28 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
             perPage={query.pageSize}
             totalCount={total}
             labels={{
-              navigation: '分页',
-              firstPage: '第一页',
-              previousPage: '上一页',
-              nextPage: '下一页',
-              lastPage: '最后一页',
-              pageNumber: '页码',
-              pageSize: '每页数量',
+              navigation: copy.pagination,
+              firstPage: copy.firstPage,
+              previousPage: copy.previousPage,
+              nextPage: copy.nextPage,
+              lastPage: copy.lastPage,
+              pageNumber: copy.pageNumber,
+              pageSize: copy.pageSize,
             }}
           >
             <Pagination.Info>
               {({pageShowingRange, totalCount}) => (
                 <Text as="span" variant="secondary" size="sm">
-                  显示 {pageShowingRange}，共 {totalCount ?? 0} 条
+                  {locale === 'zh'
+                    ? `${copy.showing} ${pageShowingRange}，${copy.of} ${totalCount ?? 0} 条`
+                    : `${copy.showing} ${pageShowingRange} ${copy.of} ${totalCount ?? 0}`}
                 </Text>
               )}
             </Pagination.Info>
             <Pagination.Separator />
             <Pagination.PageSize
               value={query.pageSize}
-              label="每页"
+              label={copy.perPageLabel}
               options={[5, 10, 20]}
               onChange={pageSize => setQuery(current => ({...current, page: 1, pageSize}))}
             />
@@ -402,13 +413,18 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
       <Dialog.Root open={dialogMode !== null} onOpenChange={open => !open && setDialogMode(null)}>
         <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
           <div className="flex flex-col gap-5">
-            <Dialog.Title>{dialogMode === 'create' ? `新增${schema.title}` : `编辑${schema.title}`}</Dialog.Title>
+            <Dialog.Title>
+              {dialogMode === 'create'
+                ? locale === 'zh' ? `${copy.add}${schema.title}` : `${copy.add} ${schema.title}`
+                : locale === 'zh' ? `${copy.edit}${schema.title}` : `${copy.edit} ${schema.title}`}
+            </Dialog.Title>
             {formMessage ? <Banner variant="error" title={formMessage} /> : null}
             <div className="grid gap-4 sm:grid-cols-2">
               {editableFields(schema).map(field => (
                 <FormField
                   key={field.key}
                   field={field}
+                  locale={locale}
                   value={draft[field.key]}
                   error={formErrors[field.key]}
                   onChange={value => {
@@ -423,8 +439,8 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
               ))}
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setDialogMode(null)}>取消</Button>
-              <Button variant="primary" loading={isSaving} onClick={saveDraft}>保存</Button>
+              <Button variant="secondary" onClick={() => setDialogMode(null)}>{copy.cancel}</Button>
+              <Button variant="primary" loading={isSaving} onClick={saveDraft}>{copy.save}</Button>
             </div>
           </div>
         </Dialog>
@@ -433,11 +449,11 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
       <Dialog.Root role="alertdialog" open={confirmDelete !== null} onOpenChange={open => !open && setConfirmDelete(null)}>
         <Dialog size="base" className="p-6">
           <div className="flex flex-col gap-4">
-            <Dialog.Title>删除记录</Dialog.Title>
-            <Dialog.Description>删除后当前列表会立即更新。</Dialog.Description>
+            <Dialog.Title>{copy.deleteTitle}</Dialog.Title>
+            <Dialog.Description>{copy.deleteDescription}</Dialog.Description>
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setConfirmDelete(null)}>取消</Button>
-              <Button variant="destructive" onClick={deleteRecord}>确认删除</Button>
+              <Button variant="secondary" onClick={() => setConfirmDelete(null)}>{copy.cancel}</Button>
+              <Button variant="destructive" onClick={deleteRecord}>{copy.delete}</Button>
             </div>
           </div>
         </Dialog>

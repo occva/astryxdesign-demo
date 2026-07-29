@@ -8,6 +8,7 @@ import {ArrowClockwise} from '@phosphor-icons/react';
 import {mockApi} from '../services/mockApi';
 import type {DashboardData, DashboardMetric, StatusTone} from '../types';
 import {Card, PageTitle, SectionTitle, StatusBadge, colorToBadgeVariant} from './kumo-ui';
+import {uiCopy, type Locale} from '../localization';
 
 function MetricCard({metric}: {metric: DashboardMetric}) {
   const variant = metric.tone === 'negative' ? 'error' : metric.tone === 'positive' ? 'success' : 'info';
@@ -45,7 +46,8 @@ function activityTone(status: StatusTone) {
   return status;
 }
 
-export function DashboardPage() {
+export function DashboardPage({locale}: {locale: Locale}) {
+  const copy = uiCopy[locale].dashboard;
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -69,12 +71,12 @@ export function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale]);
 
   if (!data) {
     return (
       <Card>
-        <Text>{isLoading ? '正在加载工作台...' : '暂无工作台数据'}</Text>
+        <Text>{isLoading ? copy.loading : copy.empty}</Text>
       </Card>
     );
   }
@@ -82,7 +84,7 @@ export function DashboardPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageTitle
-        title="首页"
+        title={copy.title}
         actions={
           <Button
             variant="secondary"
@@ -90,7 +92,7 @@ export function DashboardPage() {
             loading={isLoading}
             onClick={loadDashboard}
           >
-            刷新数据
+            {copy.refresh}
           </Button>
         }
       />
@@ -102,7 +104,7 @@ export function DashboardPage() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
         <LayerCard className="min-w-0">
           <LayerCard.Secondary>
-            <SectionTitle title="近 12 月业务趋势" aside={<Badge variant="blue">12 个月</Badge>} />
+            <SectionTitle title={copy.trendTitle} aside={<Badge variant="blue">{copy.months}</Badge>} />
           </LayerCard.Secondary>
           <LayerCard.Primary>
             <TrendBars data={data.trend} />
@@ -111,7 +113,7 @@ export function DashboardPage() {
 
         <LayerCard className="min-w-0">
           <LayerCard.Secondary>
-            <SectionTitle title="模块占比" />
+            <SectionTitle title={copy.distribution} />
           </LayerCard.Secondary>
           <LayerCard.Primary>
             <div className="flex flex-col gap-4">
@@ -121,7 +123,7 @@ export function DashboardPage() {
                     <Text as="span">{item.label}</Text>
                     <Badge variant={colorToBadgeVariant(item.color)}>{item.value}%</Badge>
                   </div>
-                  <Meter label={`${item.label} 容量`} value={item.value} max={item.capacity} showValue={false} />
+                  <Meter label={`${item.label} ${copy.capacity}`} value={item.value} max={item.capacity} showValue={false} />
                 </div>
               ))}
             </div>
@@ -131,7 +133,7 @@ export function DashboardPage() {
 
       <Card>
         <div className="flex flex-col gap-4">
-          <SectionTitle title="系统动态" aside={<Text variant="secondary" size="sm">最近更新</Text>} />
+          <SectionTitle title={copy.activity} aside={<Text variant="secondary" size="sm">{copy.latest}</Text>} />
           <div className="divide-y divide-kumo-line">
             {data.activities.map(activity => (
               <div key={activity.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">

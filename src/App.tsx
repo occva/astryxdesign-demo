@@ -14,6 +14,7 @@ import {
   SignIn,
   SignOut,
   Sun,
+  Translate,
   X,
 } from "@phosphor-icons/react";
 import { mockApi } from "./services/mockApi";
@@ -31,9 +32,17 @@ import { ResourcePage } from "./components/ResourcePage";
 import { UserCenterPage } from "./components/UserCenterPage";
 import { ModuleIcon } from "./components/icons";
 import { Avatar, Card, FormInput, StatusBadge } from "./components/kumo-ui";
+import {
+  LOCALE_STORAGE_KEY,
+  localeMeta,
+  uiCopy,
+  type Locale,
+} from "./localization";
 
 type AuthMode = "login" | "register";
 type ThemeMode = "light" | "dark";
+
+const SIDEBAR_STORAGE_KEY = "kumo-demo-sidebar-open";
 
 const notificationColors: Record<
   AppNotification["status"],
@@ -76,10 +85,10 @@ function findParentModule(
   return undefined;
 }
 
-function BrandMark() {
+function BrandMark({ className = "" }: { className?: string }) {
   return (
     <img
-      className="size-10 shrink-0 rounded-xl"
+      className={`size-10 shrink-0 rounded-xl ${className}`}
       src="/original-logo.png"
       alt=""
       aria-hidden="true"
@@ -96,12 +105,17 @@ function sidebarIcon(name: AppModule["icon"]) {
 function AuthPage({
   appConfig,
   authUsers,
+  locale,
+  onLocaleToggle,
   onComplete,
 }: {
   appConfig: AppConfig;
   authUsers: AuthUser[];
+  locale: Locale;
+  onLocaleToggle: () => void;
   onComplete: (session: AuthSession) => void;
 }) {
+  const copy = uiCopy[locale].auth;
   const defaultUser = authUsers[0] ?? { name: "", email: "", password: "" };
   const [mode, setMode] = useState<AuthMode>("login");
   const [name, setName] = useState(defaultUser.name);
@@ -117,15 +131,15 @@ function AuthPage({
   };
   const submit = async () => {
     if (isRegister && name.trim().length === 0) {
-      setMessage("请输入姓名后再注册。");
+      setMessage(copy.nameRequired);
       return;
     }
     if (!email.includes("@")) {
-      setMessage("请输入有效的邮箱地址。");
+      setMessage(copy.emailInvalid);
       return;
     }
     if (password.length < 6) {
-      setMessage("密码至少需要 6 位。");
+      setMessage(copy.passwordShort);
       return;
     }
     setIsSubmitting(true);
@@ -139,14 +153,23 @@ function AuthPage({
       setMessage(null);
       onComplete(session);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "认证失败，请重试。");
+      setMessage(error instanceof Error ? error.message : copy.failed);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-kumo-canvas px-6 py-10">
+    <main className="relative grid min-h-screen place-items-center bg-kumo-canvas px-6 py-10">
+      <Button
+        className="absolute right-6 top-6"
+        shape="square"
+        variant="secondary"
+        icon={Translate}
+        aria-label={localeMeta[locale].switchLabel}
+        title={localeMeta[locale].switchLabel}
+        onClick={onLocaleToggle}
+      />
       <div className="flex w-full max-w-[24rem] flex-col gap-5">
         <div className="flex flex-col items-center gap-2 text-center">
           <BrandMark />
@@ -158,19 +181,19 @@ function AuthPage({
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1">
               <Text variant="heading2" as="h1">
-                {isRegister ? "注册账号" : "登录账号"}
+                {isRegister ? copy.registerTitle : copy.loginTitle}
               </Text>
               <Text variant="secondary" size="sm">
                 {isRegister
-                  ? "创建账号后进入后台管理系统"
-                  : "使用演示账号进入后台管理系统"}
+                  ? copy.registerDescription
+                  : copy.loginDescription}
               </Text>
             </div>
             {message ? <Banner variant="error" title={message} /> : null}
             <div className="flex flex-col gap-4">
               {isRegister ? (
                 <FormInput
-                  label="姓名"
+                  label={copy.name}
                   value={name}
                   required
                   autoFocus
@@ -178,7 +201,7 @@ function AuthPage({
                 />
               ) : null}
               <FormInput
-                label="邮箱"
+                label={copy.email}
                 value={email}
                 type="email"
                 required
@@ -186,7 +209,7 @@ function AuthPage({
                 onValueChange={setEmail}
               />
               <FormInput
-                label="密码"
+                label={copy.password}
                 value={password}
                 type="password"
                 required
@@ -200,11 +223,11 @@ function AuthPage({
               loading={isSubmitting}
               onClick={submit}
             >
-              {isRegister ? "注册并进入" : "登录"}
+              {isRegister ? copy.registerAction : copy.loginAction}
             </Button>
             <div className="flex flex-wrap justify-center gap-1 text-sm">
               <Text as="span" variant="secondary">
-                {isRegister ? "已有账号？" : "还没有账号？"}
+                {isRegister ? copy.hasAccount : copy.newHere}
               </Text>
               <Link
                 href={isRegister ? "#login" : "#register"}
@@ -213,7 +236,7 @@ function AuthPage({
                   switchMode(isRegister ? "login" : "register");
                 }}
               >
-                {isRegister ? "返回登录" : "立即注册"}
+                {isRegister ? copy.loginAction : copy.registerTitle}
               </Link>
             </div>
           </div>
@@ -225,15 +248,18 @@ function AuthPage({
 
 function NotificationCenter({
   notifications,
+  locale,
   onMarkRead,
   onMarkAllRead,
   onClose,
 }: {
   notifications: AppNotification[];
+  locale: Locale;
   onMarkRead: (id: string) => void;
   onMarkAllRead: () => void;
   onClose: () => void;
 }) {
+  const copy = uiCopy[locale].notifications;
   const unreadCount = notifications.filter((item) => !item.isRead).length;
 
   return (
@@ -241,14 +267,14 @@ function NotificationCenter({
       <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
         <div className="flex flex-col gap-5">
           <div className="flex items-center justify-between gap-3">
-            <Dialog.Title>通知中心</Dialog.Title>
+            <Dialog.Title>{copy.title}</Dialog.Title>
             <Button
               size="sm"
               variant="secondary"
               disabled={unreadCount === 0}
               onClick={onMarkAllRead}
             >
-              全部已读
+              {copy.markAllRead}
             </Button>
           </div>
           {notifications.length > 0 ? (
@@ -281,16 +307,16 @@ function NotificationCenter({
                               : "blue"
                     }
                   >
-                    {item.isRead ? "已读" : "未读"}
+                    {item.isRead ? copy.read : copy.unread}
                   </Badge>
                 </button>
               ))}
             </div>
           ) : (
-            <Text variant="secondary">暂无数据</Text>
+            <Text variant="secondary">{copy.empty}</Text>
           )}
           <div className="flex justify-end">
-            <Button onClick={onClose}>关闭</Button>
+            <Button onClick={onClose}>{copy.close}</Button>
           </div>
         </div>
       </Dialog>
@@ -299,6 +325,10 @@ function NotificationCenter({
 }
 
 export function App() {
+  const [locale, setLocale] = useState<Locale>(() => {
+    if (typeof window === "undefined") return "en";
+    return window.localStorage.getItem(LOCALE_STORAGE_KEY) === "zh" ? "zh" : "en";
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSessionChecked, setIsSessionChecked] = useState(false);
   const [currentSession, setCurrentSession] = useState<AuthSession | null>(
@@ -313,8 +343,23 @@ export function App() {
     useState(false);
   const [schemas, setSchemas] = useState<ResourceSchema[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) !== "false";
+  });
+  const [openSidebarGroups, setOpenSidebarGroups] = useState<Record<string, boolean>>({});
+  const copy = uiCopy[locale];
+
+  const updateSidebarOpen = (open: boolean) => {
+    setIsSidebarOpen(open);
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(open));
+  };
 
   useEffect(() => {
+    mockApi.setLocale(locale);
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    document.documentElement.lang = localeMeta[locale].htmlLang;
+    document.title = locale === "zh" ? "通用后台管理" : "Admin Console";
     mockApi.getAppConfig().then(setAppConfig);
     mockApi.getAuthUsers().then(setAuthUsers);
     mockApi.getSession().then((session) => {
@@ -324,7 +369,13 @@ export function App() {
     });
     mockApi.getNotifications().then(setNotifications);
     mockApi.getSchemas().then(setSchemas);
-  }, []);
+  }, [locale]);
+
+  const toggleLocale = () => {
+    const nextLocale: Locale = locale === "en" ? "zh" : "en";
+    mockApi.setLocale(nextLocale);
+    setLocale(nextLocale);
+  };
 
   const modules = appConfig?.modules ?? [];
   const appProfile = appConfig?.profile;
@@ -344,7 +395,7 @@ export function App() {
     [modules, activeModule?.id],
   );
   const activeGroup =
-    activeModule?.group === "导航" ? null : activeModule?.group;
+    activeModule?.group === copy.navigationGroup ? null : activeModule?.group;
   const groupLanding = activeGroup
     ? firstLeafModule(
         modules.find((item) => item.group === activeGroup) ?? activeModule!,
@@ -424,7 +475,7 @@ export function App() {
         className="min-h-screen bg-kumo-canvas p-6 text-kumo-default"
       >
         <Card>
-          <Text>正在加载...</Text>
+          <Text>{copy.loading}</Text>
         </Card>
       </div>
     );
@@ -440,6 +491,8 @@ export function App() {
         <AuthPage
           appConfig={appConfig}
           authUsers={authUsers}
+          locale={locale}
+          onLocaleToggle={toggleLocale}
           onComplete={(session) => {
             setCurrentSession(session);
             setIsAuthenticated(true);
@@ -458,7 +511,7 @@ export function App() {
         className="min-h-screen bg-kumo-canvas p-6 text-kumo-default"
       >
         <Card>
-          <Text>正在加载...</Text>
+          <Text>{copy.loading}</Text>
         </Card>
       </div>
     );
@@ -466,12 +519,53 @@ export function App() {
 
   const renderSideNavItem = (item: AppModule) => {
     if (item.children?.length) {
+      if (!isSidebarOpen) {
+        return (
+          <Sidebar.MenuItem key={item.id}>
+            <DropdownMenu>
+              <DropdownMenu.Trigger
+                render={
+                  <Sidebar.MenuButton
+                    className="group-data-[state=collapsed]/sidebar:px-2"
+                    icon={sidebarIcon(item.icon)}
+                    aria-label={item.title}
+                  />
+                }
+              />
+              <DropdownMenu.Content side="right" align="start" className="min-w-44 p-2">
+                {item.children.map((child) => (
+                  <DropdownMenu.Item
+                    key={child.id}
+                    className={activePage === child.id ? "bg-kumo-tint text-kumo-strong" : undefined}
+                    icon={sidebarIcon(child.icon)}
+                    selected={activePage === child.id}
+                    onClick={() => navigate(child.id)}
+                  >
+                    {child.title}
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </Sidebar.MenuItem>
+        );
+      }
+
+      const isGroupOpen = openSidebarGroups[item.id] ?? true;
       return (
         <Sidebar.MenuItem key={item.id}>
-          <Sidebar.Collapsible defaultOpen>
+          <Sidebar.Collapsible
+            open={isGroupOpen}
+            onOpenChange={(open) => {
+              setOpenSidebarGroups((current) => ({...current, [item.id]: open}));
+            }}
+          >
             <Sidebar.CollapsibleTrigger
               render={
-                <Sidebar.MenuButton icon={sidebarIcon(item.icon)}>
+                <Sidebar.MenuButton
+                  className="group-data-[state=collapsed]/sidebar:px-2"
+                  icon={sidebarIcon(item.icon)}
+                  tooltip={item.title}
+                >
                   {item.title}
                   <Sidebar.MenuChevron />
                 </Sidebar.MenuButton>
@@ -498,8 +592,10 @@ export function App() {
     return (
       <Sidebar.MenuButton
         key={item.id}
+        className="group-data-[state=collapsed]/sidebar:px-2"
         active={activePage === item.id}
         icon={sidebarIcon(item.icon)}
+        tooltip={item.title}
         onClick={() => navigate(item.id)}
       >
         {item.title}
@@ -508,12 +604,12 @@ export function App() {
   };
 
   const renderPage = () => {
-    if (activeModule.kind === "dashboard") return <DashboardPage />;
-    if (activeModule.id === "userCenter") return <UserCenterPage />;
-    if (activeSchema) return <ResourcePage schema={activeSchema} />;
+    if (activeModule.kind === "dashboard") return <DashboardPage locale={locale} />;
+    if (activeModule.id === "userCenter") return <UserCenterPage locale={locale} />;
+    if (activeSchema) return <ResourcePage schema={activeSchema} locale={locale} />;
     return (
       <Card>
-        <Text>暂无页面配置。</Text>
+        <Text>{copy.noPage}</Text>
       </Card>
     );
   };
@@ -525,18 +621,19 @@ export function App() {
       className="h-dvh overflow-hidden bg-kumo-canvas text-kumo-default"
     >
       <Sidebar.Provider
-        defaultOpen
+        open={isSidebarOpen}
+        onOpenChange={updateSidebarOpen}
         collapsible="icon"
         className="h-full overflow-hidden"
       >
         <Sidebar className="h-dvh shrink-0" contentClassName="bg-kumo-elevated">
           <Sidebar.Header>
             <button
-              className="flex w-full min-w-0 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint"
+              className="flex w-full min-w-0 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0"
               type="button"
               onClick={() => navigate("charts")}
             >
-              <BrandMark />
+              <BrandMark className="group-data-[state=collapsed]/sidebar:size-8" />
               <span className="min-w-0 truncate font-semibold group-data-[state=collapsed]/sidebar:hidden">
                 {appProfile.name}
               </span>
@@ -551,46 +648,51 @@ export function App() {
             ))}
           </Sidebar.Content>
           <Sidebar.Footer className="h-auto py-2">
-            <DropdownMenu>
-              <DropdownMenu.Trigger
-                className="w-full text-left"
-                aria-label="账号菜单"
-              >
-                <span className="flex min-w-0 items-center gap-3 rounded-lg p-2 hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
-                  <Avatar
-                    name={currentSession?.user.name ?? appProfile.operator}
-                    className="size-8 shrink-0"
-                  />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[state=collapsed]/sidebar:hidden">
-                    <Text as="span" size="sm" bold truncate>
-                      {currentSession?.user.name ?? appProfile.operator}
-                    </Text>
-                    <Text as="span" variant="secondary" size="xs" truncate>
-                      {appProfile.department}
-                    </Text>
-                  </span>
-                  <GearSix className="size-4 shrink-0 text-kumo-subtle group-data-[state=collapsed]/sidebar:hidden" />
-                </span>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content>
-                {accountMenuItems.map((item) => (
-                  <DropdownMenu.Item
-                    key={item.label}
-                    icon={item.icon}
-                    onClick={item.onClick}
-                  >
-                    {item.label}
-                  </DropdownMenu.Item>
-                ))}
-              </DropdownMenu.Content>
-            </DropdownMenu>
+            <div className="flex w-full min-w-0 items-center gap-3 p-2 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
+              <Avatar
+                name={currentSession?.user.name ?? appProfile.operator}
+                className="size-8 shrink-0"
+              />
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[state=collapsed]/sidebar:hidden">
+                <Text as="span" size="sm" bold truncate>
+                  {currentSession?.user.name ?? appProfile.operator}
+                </Text>
+                <Text as="span" variant="secondary" size="xs" truncate>
+                  {appProfile.department}
+                </Text>
+              </span>
+              <DropdownMenu>
+                <DropdownMenu.Trigger
+                  render={
+                    <button
+                      className="shrink-0 rounded-md p-1.5 text-kumo-subtle hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:hidden"
+                      type="button"
+                      aria-label={copy.accountMenu}
+                    >
+                      <GearSix className="size-4" />
+                    </button>
+                  }
+                />
+                <DropdownMenu.Content side="top" align="start">
+                  {accountMenuItems.map((item) => (
+                    <DropdownMenu.Item
+                      key={item.label}
+                      icon={item.icon}
+                      onClick={item.onClick}
+                    >
+                      {item.label}
+                    </DropdownMenu.Item>
+                  ))}
+                </DropdownMenu.Content>
+              </DropdownMenu>
+            </div>
           </Sidebar.Footer>
         </Sidebar>
 
         <main className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden">
           <header className="flex min-h-18 flex-wrap items-center justify-between gap-3 border-b border-kumo-line bg-kumo-elevated/85 px-6 py-4 backdrop-blur">
             <div className="flex min-w-0 items-center gap-3">
-              <Sidebar.Trigger aria-label="折叠导航" />
+              <Sidebar.Trigger aria-label={copy.collapseNavigation} />
               <div className="flex min-w-0 items-center gap-2 text-sm text-kumo-subtle">
                 {activeGroup && groupLanding ? (
                   <>
@@ -623,13 +725,21 @@ export function App() {
             </div>
             <div className="flex items-center gap-2">
               <StatusBadge tone={themeMode === "dark" ? "info" : "neutral"}>
-                {themeMode === "dark" ? "深色" : "浅色"}
+                {themeMode === "dark" ? copy.dark : copy.light}
               </StatusBadge>
               <Button
                 shape="square"
                 variant="secondary"
+                icon={Translate}
+                aria-label={localeMeta[locale].switchLabel}
+                title={localeMeta[locale].switchLabel}
+                onClick={toggleLocale}
+              />
+              <Button
+                shape="square"
+                variant="secondary"
                 icon={themeMode === "dark" ? Sun : Moon}
-                aria-label="切换主题"
+                aria-label={copy.toggleTheme}
                 onClick={() =>
                   setThemeMode((current) =>
                     current === "dark" ? "light" : "dark",
@@ -640,7 +750,7 @@ export function App() {
                 shape="square"
                 variant="secondary"
                 icon={Bell}
-                aria-label="通知中心"
+                aria-label={copy.notificationsLabel}
                 onClick={() => setIsNotificationCenterOpen(true)}
               />
             </div>
@@ -664,7 +774,7 @@ export function App() {
                     <span
                       role="button"
                       tabIndex={0}
-                      aria-label={`关闭${page.title}`}
+                      aria-label={`${copy.closePage} ${page.title}`}
                       className="rounded p-0.5 hover:bg-kumo-fill"
                       onClick={(event) => {
                         event.stopPropagation();
@@ -694,6 +804,7 @@ export function App() {
         {isNotificationCenterOpen ? (
           <NotificationCenter
             notifications={notifications}
+            locale={locale}
             onMarkRead={markNotificationRead}
             onMarkAllRead={markAllNotificationsRead}
             onClose={() => setIsNotificationCenterOpen(false)}

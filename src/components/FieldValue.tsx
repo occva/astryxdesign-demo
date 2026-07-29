@@ -4,6 +4,7 @@ import {Popover} from '@cloudflare/kumo/components/popover';
 import {Text} from '@cloudflare/kumo/components/text';
 import {colorToBadgeVariant, StatusBadge} from './kumo-ui';
 import type {ResourceField, StatusTone} from '../types';
+import {uiCopy, type Locale} from '../localization';
 
 function optionFor(field: ResourceField, value: unknown) {
   return field.options?.find(option => option.value === String(value));
@@ -14,7 +15,7 @@ function toneFor(status?: StatusTone) {
   return status ?? 'neutral';
 }
 
-export function FieldValue({field, value}: {field: ResourceField; value: unknown}) {
+export function FieldValue({field, value, locale}: {field: ResourceField; value: unknown; locale: Locale}) {
   if (field.kind === 'status') {
     const option = optionFor(field, value);
     return (
@@ -41,7 +42,9 @@ export function FieldValue({field, value}: {field: ResourceField; value: unknown
                 <button
                   className="inline-flex rounded-full"
                   type="button"
-                  aria-label={`查看全部${tags.length}个标签`}
+                  aria-label={locale === 'zh'
+                    ? `${uiCopy.zh.resource.viewTags}${tags.length}${uiCopy.zh.resource.tags}`
+                    : `${uiCopy.en.resource.viewTags} ${tags.length} ${uiCopy.en.resource.tags}`}
                 >
                   <Badge variant="secondary">+{hiddenCount}</Badge>
                 </button>
@@ -71,7 +74,7 @@ export function FieldValue({field, value}: {field: ResourceField; value: unknown
   }
 
   if (field.kind === 'currency') {
-    return <Text as="span">¥{Number(value).toLocaleString('zh-CN')}</Text>;
+    return <Text as="span">{locale === 'zh' ? '¥' : '$'}{Number(value).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US')}</Text>;
   }
 
   if (field.kind === 'date') {

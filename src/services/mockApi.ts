@@ -4,6 +4,16 @@ import {dashboardData} from '../mocks/dashboard';
 import {notifications} from '../mocks/notifications';
 import {resourceRecords, resourceSchemas} from '../mocks/resources';
 import {userCenterData, userCenterDetailSchema} from '../mocks/userCenter';
+import {
+  zhAppConfig,
+  zhDashboardData,
+  zhNotifications,
+  zhResourceRecords,
+  zhResourceSchemas,
+  zhUserCenterData,
+  zhUserCenterDetailSchema,
+} from '../mocks/zh';
+import type {Locale} from '../localization';
 import type {
   AdminRecord,
   AppConfig,
@@ -20,12 +30,41 @@ import type {
   UserProfileDetail,
 } from '../types';
 
-const store: Record<string, AdminRecord[]> = structuredClone(resourceRecords);
+let currentLocale: Locale = 'en';
+let store: Record<string, AdminRecord[]> = structuredClone(resourceRecords);
 const SESSION_STORAGE_KEY = 'kumo-demo-session';
 const AUTH_USERS_STORAGE_KEY = 'kumo-demo-auth-users';
 const authStore: AuthUser[] = readAuthUsers();
 let notificationStore: AppNotification[] = structuredClone(notifications);
 let userCenterStore: UserCenterData = structuredClone(userCenterData);
+
+function localizedAppConfig() {
+  return currentLocale === 'zh' ? zhAppConfig : appConfig;
+}
+
+function localizedDashboardData() {
+  return currentLocale === 'zh' ? zhDashboardData : dashboardData;
+}
+
+function localizedNotifications() {
+  return currentLocale === 'zh' ? zhNotifications : notifications;
+}
+
+function localizedResourceSchemas() {
+  return currentLocale === 'zh' ? zhResourceSchemas : resourceSchemas;
+}
+
+function localizedResourceRecords() {
+  return currentLocale === 'zh' ? zhResourceRecords : resourceRecords;
+}
+
+function localizedUserCenterData() {
+  return currentLocale === 'zh' ? zhUserCenterData : userCenterData;
+}
+
+function localizedUserCenterDetailSchema() {
+  return currentLocale === 'zh' ? zhUserCenterDetailSchema : userCenterDetailSchema;
+}
 
 function delay<T>(value: T, ms = 180): Promise<T> {
   return new Promise(resolve => window.setTimeout(() => resolve(value), ms));
@@ -70,8 +109,8 @@ function readAuthUsers(): AuthUser[] {
   try {
     const stored = JSON.parse(raw) as AuthUser[];
     const usersByEmail = new Map<string, AuthUser>();
-    for (const user of mockAuthUsers) usersByEmail.set(user.email, user);
     for (const user of stored) usersByEmail.set(user.email, user);
+    for (const user of mockAuthUsers) usersByEmail.set(user.email, user);
     return [...usersByEmail.values()];
   } catch {
     window.localStorage.removeItem(AUTH_USERS_STORAGE_KEY);
@@ -104,8 +143,9 @@ function staticDetailValue(label: string, previous: UserCenterData) {
 }
 
 function detailsFromProfile(profile: UserProfile, previous: UserCenterData) {
-  const build = (section: keyof typeof userCenterDetailSchema): UserProfileDetail[] => (
-    userCenterDetailSchema[section].map(field => {
+  const detailSchema = localizedUserCenterDetailSchema();
+  const build = (section: keyof typeof detailSchema): UserProfileDetail[] => (
+    detailSchema[section].map(field => {
       if (field.source === 'enterpriseWechat' || field.source === 'emergencyContact') {
         return {label: field.label, value: staticDetailValue(field.label, previous)};
       }
@@ -127,7 +167,7 @@ function profileFromAuthUser(user: AuthUser, previous: UserCenterData): UserProf
     name: user.name,
     account,
     email: user.email,
-    status: '在线值守',
+    status: localizedUserCenterData().statusOptions[0]?.value ?? previous.profile.status,
   };
 }
 
@@ -146,7 +186,12 @@ function hydrateUserCenterFromSession(session: AuthSession | null) {
     password: '',
   };
   applyProfile(profileFromAuthUser(user, userCenterStore));
-  return session;
+  const localizedSession = {
+    ...session,
+    user: {name: user.name, email: user.email},
+  };
+  writeSession(localizedSession);
+  return localizedSession;
 }
 
 function combineUserCenter(): UserCenterData {
@@ -161,8 +206,27 @@ function combineUserCenter(): UserCenterData {
 }
 
 export const mockApi = {
+  setLocale(locale: Locale): void {
+    if (locale === currentLocale) return;
+    const notificationReadState = new Map(notificationStore.map(item => [item.id, item.isRead]));
+    const securityState = new Map(userCenterStore.securitySettings.map(item => [item.key, item.value]));
+    currentLocale = locale;
+    store = structuredClone(localizedResourceRecords());
+    notificationStore = structuredClone(localizedNotifications()).map(item => ({
+      ...item,
+      isRead: notificationReadState.get(item.id) ?? item.isRead,
+    }));
+    userCenterStore = structuredClone(localizedUserCenterData());
+    userCenterStore.securitySettings = userCenterStore.securitySettings.map(item => ({
+      ...item,
+      value: securityState.get(item.key) ?? item.value,
+    }));
+    const demoUser = authStore.find(item => item.email === mockAuthUsers[0]?.email);
+    if (demoUser) demoUser.name = userCenterStore.profile.name;
+  },
+
   async getAppConfig(): Promise<AppConfig> {
-    return delay(structuredClone(appConfig), 80);
+    return delay(structuredClone(localizedAppConfig()), 80);
   },
 
   async getAuthUsers(): Promise<AuthUser[]> {
@@ -176,7 +240,7 @@ export const mockApi = {
   async login(email: string, password: string): Promise<AuthSession> {
     const user = authStore.find(item => item.email === email && item.password === password);
     if (!user) {
-      throw new Error('账号或密码不正确。');
+      throw new Error(currentLocale === 'zh' ? '账号或密码不正确。' : 'Incorrect email or password.');
     }
     const session = createSession(user);
     writeSession(session);
@@ -186,7 +250,7 @@ export const mockApi = {
 
   async registerAuthUser(user: AuthUser): Promise<AuthSession> {
     if (authStore.some(item => item.email === user.email)) {
-      throw new Error('该邮箱已存在。');
+      throw new Error(currentLocale === 'zh' ? '该邮箱已存在。' : 'An account with this email already exists.');
     }
     authStore.push(user);
     writeAuthUsers();
@@ -219,7 +283,7 @@ export const mockApi = {
   },
 
   async getDashboard(): Promise<DashboardData> {
-    return delay(structuredClone(dashboardData));
+    return delay(structuredClone(localizedDashboardData()));
   },
 
   async getUserProfile(): Promise<UserProfile> {
@@ -260,7 +324,7 @@ export const mockApi = {
   },
 
   async getSchemas(): Promise<ResourceSchema[]> {
-    return delay(structuredClone(resourceSchemas), 80);
+    return delay(structuredClone(localizedResourceSchemas()), 80);
   },
 
   async list(resourceId: string, query: MockQuery): Promise<MockPage<AdminRecord>> {
@@ -278,8 +342,8 @@ export const mockApi = {
         const left = asText(a[query.sortKey!]);
         const right = asText(b[query.sortKey!]);
         return query.sortDirection === 'desc'
-          ? right.localeCompare(left, 'zh-CN', {numeric: true})
-          : left.localeCompare(right, 'zh-CN', {numeric: true});
+          ? right.localeCompare(left, currentLocale === 'zh' ? 'zh-CN' : 'en', {numeric: true})
+          : left.localeCompare(right, currentLocale === 'zh' ? 'zh-CN' : 'en', {numeric: true});
       });
     }
 
@@ -305,7 +369,7 @@ export const mockApi = {
     const rows = store[resourceId] ?? [];
     const index = rows.findIndex(item => item.id === id);
     if (index === -1) {
-      throw new Error(`Record ${id} was not found.`);
+      throw new Error(currentLocale === 'zh' ? `未找到记录 ${id}。` : `Record ${id} was not found.`);
     }
     rows[index] = {...rows[index], ...patch};
     return delay(structuredClone(rows[index]));

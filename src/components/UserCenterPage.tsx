@@ -25,6 +25,7 @@ import {
   colorToBadgeVariant,
 } from './kumo-ui';
 import {Badge} from '@cloudflare/kumo/components/badge';
+import {uiCopy, type Locale} from '../localization';
 
 function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
   return (
@@ -45,6 +46,7 @@ function ProfileDialog({
   data,
   message,
   isSaving,
+  locale,
   onOpenChange,
   onDraftChange,
   onSave,
@@ -54,58 +56,60 @@ function ProfileDialog({
   data: UserCenterData;
   message: string | null;
   isSaving: boolean;
+  locale: Locale;
   onOpenChange: (open: boolean) => void;
   onDraftChange: (profile: UserProfile) => void;
   onSave: () => void;
 }) {
+  const copy = uiCopy[locale].userCenter;
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
         <div className="flex flex-col gap-5">
-          <Dialog.Title>编辑资料</Dialog.Title>
+          <Dialog.Title>{copy.editTitle}</Dialog.Title>
           {profileDraft ? (
             <>
               {message ? <Banner variant="error" title={message} /> : null}
               <div className="grid gap-4 sm:grid-cols-2">
                 <FormInput
-                  label="姓名"
+                  label={copy.name}
                   value={profileDraft.name}
                   required
                   onValueChange={name => onDraftChange({...profileDraft, name})}
                 />
                 <FormInput
-                  label="岗位"
+                  label={copy.jobTitle}
                   value={profileDraft.title}
                   onValueChange={title => onDraftChange({...profileDraft, title})}
                 />
                 <FormInput
-                  label="所属部门"
+                  label={copy.department}
                   value={profileDraft.department}
                   onValueChange={department => onDraftChange({...profileDraft, department})}
                 />
                 <FormInput
-                  label="直属上级"
+                  label={copy.manager}
                   value={profileDraft.manager}
                   onValueChange={manager => onDraftChange({...profileDraft, manager})}
                 />
                 <FormInput
-                  label="邮箱"
+                  label={copy.email}
                   value={profileDraft.email}
                   type="email"
                   onValueChange={email => onDraftChange({...profileDraft, email})}
                 />
                 <FormInput
-                  label="手机号"
+                  label={copy.phone}
                   value={profileDraft.phone}
                   onValueChange={phone => onDraftChange({...profileDraft, phone})}
                 />
                 <FormInput
-                  label="办公地点"
+                  label={copy.location}
                   value={profileDraft.location}
                   onValueChange={location => onDraftChange({...profileDraft, location})}
                 />
                 <FormSelect
-                  label="当前状态"
+                  label={copy.status}
                   value={profileDraft.status}
                   options={data.statusOptions}
                   onValueChange={status => onDraftChange({...profileDraft, status})}
@@ -114,8 +118,8 @@ function ProfileDialog({
             </>
           ) : null}
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>取消</Button>
-            <Button variant="primary" loading={isSaving} onClick={onSave}>保存</Button>
+            <Button variant="secondary" onClick={() => onOpenChange(false)}>{copy.cancel}</Button>
+            <Button variant="primary" loading={isSaving} onClick={onSave}>{copy.save}</Button>
           </div>
         </div>
       </Dialog>
@@ -128,6 +132,7 @@ function SecurityDialog({
   data,
   message,
   savingSecurityKey,
+  locale,
   onOpenChange,
   onMessageDismiss,
   onToggle,
@@ -136,20 +141,22 @@ function SecurityDialog({
   data: UserCenterData;
   message: string | null;
   savingSecurityKey: SecuritySetting['key'] | null;
+  locale: Locale;
   onOpenChange: (open: boolean) => void;
   onMessageDismiss: () => void;
   onToggle: (setting: SecuritySetting, value: boolean) => void;
 }) {
+  const copy = uiCopy[locale].userCenter;
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog size="lg" className="p-6">
         <div className="flex flex-col gap-5">
-          <Dialog.Title>安全设置</Dialog.Title>
+          <Dialog.Title>{copy.securityTitle}</Dialog.Title>
           {message ? (
             <Banner
               variant="error"
               title={message}
-              action={<Button size="sm" variant="secondary" onClick={onMessageDismiss}>关闭</Button>}
+              action={<Button size="sm" variant="secondary" onClick={onMessageDismiss}>{copy.dismiss}</Button>}
             />
           ) : null}
           <div className="flex flex-col gap-4">
@@ -172,7 +179,7 @@ function SecurityDialog({
             ))}
           </div>
           <div className="flex justify-end">
-            <Button variant="primary" onClick={() => onOpenChange(false)}>完成</Button>
+            <Button variant="primary" onClick={() => onOpenChange(false)}>{copy.done}</Button>
           </div>
         </div>
       </Dialog>
@@ -180,7 +187,8 @@ function SecurityDialog({
   );
 }
 
-export function UserCenterPage() {
+export function UserCenterPage({locale}: {locale: Locale}) {
+  const copy = uiCopy[locale].userCenter;
   const [data, setData] = useState<UserCenterData | null>(null);
   const [profileDraft, setProfileDraft] = useState<UserProfile | null>(null);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
@@ -210,12 +218,12 @@ export function UserCenterPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale]);
 
   if (!data) {
     return (
       <Card>
-        <Text>正在加载用户中心...</Text>
+        <Text>{copy.loading}</Text>
       </Card>
     );
   }
@@ -236,7 +244,7 @@ export function UserCenterPage() {
       setProfileMessage(null);
       setIsProfileDialogOpen(false);
     } catch (error) {
-      setProfileMessage(error instanceof Error ? error.message : '资料保存失败，请重试。');
+      setProfileMessage(error instanceof Error ? error.message : copy.profileSaveFailed);
     } finally {
       setIsProfileSaving(false);
     }
@@ -254,16 +262,16 @@ export function UserCenterPage() {
       const next = await mockApi.updateSecuritySettings(nextSettings);
       setData(current => current ? {...current, securitySettings: next} : current);
     } catch (error) {
-      setSecurityMessage(error instanceof Error ? error.message : '安全设置保存失败，已恢复原设置。');
+      setSecurityMessage(error instanceof Error ? error.message : copy.securitySaveFailed);
       setData(current => current ? {...current, securitySettings: previous} : current);
     } finally {
       setSavingSecurityKey(null);
     }
   };
 
-  const profileStatusTone = data.profile.status === '离线待命'
+  const profileStatusTone = data.profile.status === copy.offlineStatus
     ? 'neutral'
-    : data.profile.status === '忙碌处理中'
+    : data.profile.status === copy.busyStatus
       ? 'warning'
       : 'success';
 
@@ -289,8 +297,8 @@ export function UserCenterPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" icon={PencilSimpleLine} onClick={openProfileDialog}>编辑资料</Button>
-            <Button variant="primary" icon={ShieldCheck} onClick={() => setIsSecurityDialogOpen(true)}>安全设置</Button>
+            <Button variant="secondary" icon={PencilSimpleLine} onClick={openProfileDialog}>{copy.editProfile}</Button>
+            <Button variant="primary" icon={ShieldCheck} onClick={() => setIsSecurityDialogOpen(true)}>{copy.securitySettings}</Button>
           </div>
         </div>
       </Card>
@@ -299,14 +307,14 @@ export function UserCenterPage() {
         <div className="flex flex-col gap-4">
           <Card>
             <div className="flex flex-col gap-4">
-              <SectionTitle title={<span className="inline-flex items-center gap-2"><IdentificationCard className="size-5" />基本资料</span>} />
+              <SectionTitle title={<span className="inline-flex items-center gap-2"><IdentificationCard className="size-5" />{copy.profileDetails}</span>} />
               <DetailGrid items={data.personalDetails} />
             </div>
           </Card>
 
           <Card>
             <div className="flex flex-col gap-4">
-              <SectionTitle title={<span className="inline-flex items-center gap-2"><Phone className="size-5" />联系方式</span>} />
+              <SectionTitle title={<span className="inline-flex items-center gap-2"><Phone className="size-5" />{copy.contactDetails}</span>} />
               <DetailGrid items={data.contactDetails} />
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -316,7 +324,7 @@ export function UserCenterPage() {
                     window.location.href = `mailto:${data.profile.email}`;
                   }}
                 >
-                  发送邮件
+                  {copy.sendEmail}
                 </Button>
                 <Button
                   variant="secondary"
@@ -325,7 +333,7 @@ export function UserCenterPage() {
                     window.location.href = `tel:${data.profile.phone.replace(/\s/g, '')}`;
                   }}
                 >
-                  拨打电话
+                  {copy.callPhone}
                 </Button>
               </div>
             </div>
@@ -334,7 +342,7 @@ export function UserCenterPage() {
 
         <Card>
           <div className="flex flex-col gap-4">
-            <SectionTitle title={<span className="inline-flex items-center gap-2"><Buildings className="size-5" />组织身份</span>} />
+            <SectionTitle title={<span className="inline-flex items-center gap-2"><Buildings className="size-5" />{copy.organization}</span>} />
             <DetailGrid items={data.organizationDetails} />
             <div className="flex flex-wrap gap-2">
               <Badge variant="purple">{data.profile.role}</Badge>
@@ -350,6 +358,7 @@ export function UserCenterPage() {
         data={data}
         message={profileMessage}
         isSaving={isProfileSaving}
+        locale={locale}
         onOpenChange={setIsProfileDialogOpen}
         onDraftChange={setProfileDraft}
         onSave={saveProfile}
@@ -360,6 +369,7 @@ export function UserCenterPage() {
         data={data}
         message={securityMessage}
         savingSecurityKey={savingSecurityKey}
+        locale={locale}
         onOpenChange={setIsSecurityDialogOpen}
         onMessageDismiss={() => setSecurityMessage(null)}
         onToggle={(setting, value) => {
