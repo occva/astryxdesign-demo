@@ -7,6 +7,11 @@ import {LayerCard} from '@cloudflare/kumo/components/layer-card';
 import {Select} from '@cloudflare/kumo/components/select';
 import {Text} from '@cloudflare/kumo/components/text';
 import {cn} from '@cloudflare/kumo/utils';
+import {DateTimePicker} from './DateTimePicker';
+import type {DateTimePickerLocale} from './DateTimePicker';
+
+export {DateTimePicker};
+export type {DateTimePickerLocale, DateTimePickerProps} from './DateTimePicker';
 
 export type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'error';
 export type SelectItem = {label: string; value: string};
@@ -111,6 +116,47 @@ export function FormSelect({
       required={required}
       onValueChange={next => onValueChange(String(next ?? '') === allValue ? '' : String(next ?? ''))}
     />
+  );
+}
+
+export function FormDateInput({
+  label,
+  value,
+  onValueChange,
+  includeTime,
+  placeholder,
+  locale = 'en',
+  error,
+  required,
+  className,
+}: {
+  label: ReactNode;
+  value: string;
+  onValueChange: (value: string) => void;
+  includeTime?: boolean;
+  placeholder?: string;
+  locale?: DateTimePickerLocale;
+  error?: string;
+  required?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn('block w-full', className)}>
+      <span className="mb-1.5 block text-sm font-medium text-kumo-strong">
+        {label}
+        {required ? <span aria-hidden="true"> *</span> : null}
+      </span>
+      <DateTimePicker
+        value={value}
+        onValueChange={onValueChange}
+        includeTime={includeTime}
+        placeholder={placeholder}
+        locale={locale}
+        ariaLabel={String(label)}
+        invalid={Boolean(error)}
+      />
+      {error ? <span className="mt-1 block text-sm text-kumo-danger">{error}</span> : null}
+    </div>
   );
 }
 

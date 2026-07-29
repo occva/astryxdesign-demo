@@ -21,7 +21,7 @@ const userFields = [
     {label: 'Prefer not to say', value: 'Prefer not to say', color: 'gray'},
   ]},
   {key: 'tags', label: 'Tags', kind: 'tags'},
-  {key: 'createdAt', label: 'Created at', kind: 'date'},
+  {key: 'createdAt', label: 'Created at', kind: 'date', filterable: true, editable: true},
   {key: 'department', label: 'Department', kind: 'text', editable: true},
 ] satisfies ResourceSchema['fields'];
 
@@ -31,7 +31,7 @@ export const resourceSchemas: ResourceSchema[] = [
     title: 'CRUD Records',
     primaryField: 'name',
     statusField: 'status',
-    filterFields: ['name', 'phone', 'status'],
+    filterFields: ['name', 'phone', 'status', 'createdAt'],
     fields: userFields,
   },
   {
@@ -39,7 +39,7 @@ export const resourceSchemas: ResourceSchema[] = [
     title: 'System Users',
     primaryField: 'name',
     statusField: 'status',
-    filterFields: ['name', 'phone', 'status'],
+    filterFields: ['name', 'phone', 'status', 'createdAt'],
     fields: userFields,
   },
   {
@@ -47,13 +47,13 @@ export const resourceSchemas: ResourceSchema[] = [
     title: 'Roles',
     primaryField: 'name',
     statusField: 'status',
-    filterFields: ['name', 'code', 'status'],
+    filterFields: ['name', 'code', 'status', 'updatedAt'],
     fields: [
       {key: 'name', label: 'Role name', kind: 'text', width: 'fluid', filterable: true, editable: true, required: true},
       {key: 'code', label: 'Role code', kind: 'text', filterable: true, editable: true},
       {key: 'status', label: 'Status', kind: 'status', filterable: true, editable: true, options: enabledStatusOptions as never},
       {key: 'scope', label: 'Permission scope', kind: 'text', width: 'fluid', editable: true},
-      {key: 'updatedAt', label: 'Updated at', kind: 'date'},
+      {key: 'updatedAt', label: 'Updated at', kind: 'date', filterable: true, editable: true},
     ],
   },
   {

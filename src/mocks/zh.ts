@@ -29,7 +29,7 @@ const userFields = [
     {label: '保密', value: '保密', color: 'gray'},
   ]},
   {key: 'tags', label: '标签', kind: 'tags'},
-  {key: 'createdAt', label: '创建时间', kind: 'date'},
+  {key: 'createdAt', label: '创建时间', kind: 'date', filterable: true, editable: true},
   {key: 'department', label: '部门', kind: 'text', editable: true},
 ] satisfies ResourceSchema['fields'];
 
@@ -148,16 +148,16 @@ export const zhUserCenterData: UserCenterData = {
 };
 
 export const zhResourceSchemas: ResourceSchema[] = [
-  {id: 'crud', title: 'CRUD 数据表格', primaryField: 'name', statusField: 'status', filterFields: ['name', 'phone', 'status'], fields: userFields},
-  {id: 'users', title: '系统用户', primaryField: 'name', statusField: 'status', filterFields: ['name', 'phone', 'status'], fields: userFields},
+  {id: 'crud', title: 'CRUD 数据表格', primaryField: 'name', statusField: 'status', filterFields: ['name', 'phone', 'status', 'createdAt'], fields: userFields},
+  {id: 'users', title: '系统用户', primaryField: 'name', statusField: 'status', filterFields: ['name', 'phone', 'status', 'createdAt'], fields: userFields},
   {
-    id: 'roles', title: '角色管理', primaryField: 'name', statusField: 'status', filterFields: ['name', 'code', 'status'],
+    id: 'roles', title: '角色管理', primaryField: 'name', statusField: 'status', filterFields: ['name', 'code', 'status', 'updatedAt'],
     fields: [
       {key: 'name', label: '角色名称', kind: 'text', width: 'fluid', filterable: true, editable: true, required: true},
       {key: 'code', label: '角色编码', kind: 'text', filterable: true, editable: true},
       {key: 'status', label: '状态', kind: 'status', filterable: true, editable: true, options: enabledStatusOptions as never},
       {key: 'scope', label: '权限范围', kind: 'text', width: 'fluid', editable: true},
-      {key: 'updatedAt', label: '更新时间', kind: 'date'},
+      {key: 'updatedAt', label: '更新时间', kind: 'date', filterable: true, editable: true},
     ],
   },
   {

@@ -15,6 +15,11 @@ function toneFor(status?: StatusTone) {
   return status ?? 'neutral';
 }
 
+function formatDateValue(value: unknown) {
+  const text = String(value ?? '');
+  return text.replace('T', ' ').slice(0, text.includes(':') ? 16 : 10);
+}
+
 export function FieldValue({field, value, locale}: {field: ResourceField; value: unknown; locale: Locale}) {
   if (field.kind === 'status') {
     const option = optionFor(field, value);
@@ -80,9 +85,9 @@ export function FieldValue({field, value, locale}: {field: ResourceField; value:
   if (field.kind === 'date') {
     const text = String(value ?? '');
     return (
-      <Text as="span" truncate title={text}>
-        {text.slice(0, 10)}
-      </Text>
+      <time title={text} dateTime={text.replace(' ', 'T')}>
+        <Text as="span" truncate>{formatDateValue(value)}</Text>
+      </time>
     );
   }
 

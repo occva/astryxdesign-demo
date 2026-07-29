@@ -16,7 +16,7 @@ import {
 import {mockApi} from '../services/mockApi';
 import type {AdminRecord, MockQuery, ResourceField, ResourceSchema} from '../types';
 import {FieldValue} from './FieldValue';
-import {Card, FormInput, FormSelect, PageTitle} from './kumo-ui';
+import {Card, FormDateInput, FormInput, FormSelect, PageTitle} from './kumo-ui';
 import {uiCopy, type Locale} from '../localization';
 
 type DialogMode = 'create' | 'edit' | null;
@@ -53,6 +53,15 @@ function serializeCsvValue(value: unknown) {
   return `"${text.replace(/"/g, '""')}"`;
 }
 
+function hasTimePortion(value: unknown) {
+  return /\d{2}:\d{2}/.test(String(value ?? ''));
+}
+
+function isDateTimeField(field: ResourceField, value: unknown) {
+  const key = field.key.toLowerCase();
+  return hasTimePortion(value) || key.endsWith('at') || key.includes('time');
+}
+
 function FormField({
   field,
   value,
@@ -70,6 +79,21 @@ function FormField({
   const placeholder = (verb: string) => locale === 'zh'
     ? `${verb}${field.label}`
     : `${verb} ${field.label.toLowerCase()}`;
+  if (field.kind === 'date') {
+    return (
+      <FormDateInput
+        label={field.label}
+        value={String(value ?? '')}
+        onValueChange={onChange}
+        includeTime={isDateTimeField(field, value)}
+        placeholder={placeholder(copy.select)}
+        locale={locale}
+        required={field.required}
+        error={error}
+      />
+    );
+  }
+
   if (field.kind === 'select' || field.kind === 'status') {
     return (
       <FormSelect
@@ -275,6 +299,21 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
               );
             }
 
+            if (field.kind === 'date') {
+              const value = query.filters?.[field.key] ?? '';
+              return (
+                <div key={field.key} className="min-w-48 flex-1">
+                  <FormDateInput
+                    label={field.label}
+                    value={value}
+                    onValueChange={next => setFilter(field.key, next)}
+                    placeholder={locale === 'zh' ? `${copy.select}${field.label}` : `${copy.select} ${field.label.toLowerCase()}`}
+                    locale={locale}
+                  />
+                </div>
+              );
+            }
+
             return (
               <div key={field.key} className="min-w-48 flex-1">
                 <FormInput
@@ -305,12 +344,12 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
       </Card>
 
       <Card className="min-w-0 overflow-hidden p-0">
-        <div className="max-w-full overflow-x-auto border-y border-kumo-line">
+        <div className="max-w-full overflow-x-auto border-b border-kumo-line">
           {rows.length > 0 ? (
             <Table style={{minWidth: `${tableMinWidthRem}rem`}}>
               <Table.Header
                 sticky
-                className="[&_th]:bg-kumo-elevated [&_th]:shadow-[inset_0_1px_0_var(--color-kumo-line),inset_0_-1px_0_var(--color-kumo-line)]"
+                className="[&_th]:bg-kumo-elevated [&_th]:shadow-[inset_0_-1px_0_var(--color-kumo-line)]"
               >
                 <Table.Row>
                   {visibleFields.map(field => (
