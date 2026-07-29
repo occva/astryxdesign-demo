@@ -22,6 +22,7 @@ import {
 import {mockApi} from '../services/mockApi';
 import type {AdminRecord, MockQuery, ResourceField, ResourceSchema} from '../types';
 import {FieldValue} from './FieldValue';
+import {uiCopy, type Locale} from '../localization';
 
 type DialogMode = 'create' | 'edit' | null;
 
@@ -73,12 +74,18 @@ function FormField({
   value,
   onChange,
   error,
+  locale,
 }: {
   field: ResourceField;
   value: unknown;
   onChange: (value: unknown) => void;
   error?: string;
+  locale: Locale;
 }) {
+  const copy = uiCopy[locale].resource;
+  const placeholder = locale === 'zh'
+    ? `${field.kind === 'select' || field.kind === 'status' ? copy.select : copy.enter}${field.label}`
+    : `${field.kind === 'select' || field.kind === 'status' ? copy.select : copy.enter} ${field.label.toLowerCase()}`;
   if (field.kind === 'select' || field.kind === 'status') {
     return (
       <Selector
@@ -86,7 +93,7 @@ function FormField({
         value={String(value ?? '')}
         options={(field.options ?? []).map(option => ({label: option.label, value: option.value}))}
         onChange={onChange}
-        placeholder={`选择${field.label}`}
+        placeholder={placeholder}
         status={error ? {type: 'error', message: error} : undefined}
       />
     );
@@ -97,7 +104,7 @@ function FormField({
       label={field.label}
       value={String(value ?? '')}
       onChange={onChange}
-      placeholder={`输入${field.label}`}
+      placeholder={placeholder}
       isRequired={field.required}
       status={error ? {type: 'error', message: error} : undefined}
       type={field.kind === 'email' ? 'email' : 'text'}
@@ -105,7 +112,8 @@ function FormField({
   );
 }
 
-export function ResourcePage({schema}: {schema: ResourceSchema}) {
+export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: Locale}) {
+  const copy = uiCopy[locale].resource;
   const [query, setQuery] = useState<MockQuery>(defaultQuery);
   const [rows, setRows] = useState<AdminRecord[]>([]);
   const [total, setTotal] = useState(0);
@@ -137,12 +145,12 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
     return () => {
       mounted = false;
     };
-  }, [schema.id, query]);
+  }, [schema.id, query, locale]);
 
   const filters = useMemo(() => filterFields(schema), [schema]);
   const stickyActions = useTableStickyColumns<AdminRecord>({endKeys: ['actions']});
   const primaryFieldLabel =
-    schema.fields.find(field => field.key === schema.primaryField)?.label ?? '名称';
+    schema.fields.find(field => field.key === schema.primaryField)?.label ?? copy.name;
   const columns = useMemo<TableColumn<AdminRecord>[]>(() => {
     const visible = schema.fields.filter(field => field.visible !== false);
     return [
@@ -157,18 +165,18 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
               <Text type="body" className="primaryCellText">{String(item[field.key] ?? '')}</Text>
             );
           }
-          return <FieldValue field={field} value={item[field.key]} />;
+          return <FieldValue field={field} value={item[field.key]} locale={locale} />;
         },
       })),
       {
         key: 'actions',
-        header: '操作',
+        header: copy.actions,
         width: pixel(156),
         resizable: false,
         renderCell: (item: AdminRecord) => (
           <HStack gap={1} vAlign="center" className="tableActions">
             <Button
-              label="编辑"
+              label={copy.edit}
               size="sm"
               variant="secondary"
               onClick={() => {
@@ -179,7 +187,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
               }}
             />
             <Button
-              label="删除"
+              label={copy.delete}
               size="sm"
               variant="destructive"
               icon={<Icon icon={TrashIcon} size="xsm" />}
@@ -189,7 +197,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
         ),
       },
     ];
-  }, [schema]);
+  }, [schema, locale]);
 
   const refresh = () => setQuery(current => ({...current}));
 
@@ -232,11 +240,11 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
     const errors = Object.fromEntries(
       editableFields(schema)
         .filter(field => field.required && String(draft[field.key] ?? '').trim().length === 0)
-        .map(field => [field.key, `请输入${field.label}`]),
+        .map(field => [field.key, locale === 'zh' ? `${copy.enter}${field.label}` : `${copy.enter} ${field.label.toLowerCase()}`]),
     );
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      setFormMessage('请补全必填项后再保存。');
+      setFormMessage(copy.required);
       return;
     }
 
@@ -256,7 +264,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
       setFormMessage(null);
       refresh();
     } catch (error) {
-      setFormMessage(error instanceof Error ? error.message : '保存失败，请重试。');
+      setFormMessage(error instanceof Error ? error.message : copy.saveFailed);
     } finally {
       setIsSaving(false);
     }
@@ -268,14 +276,14 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
         <Heading level={1}>{schema.title}</Heading>
         <HStack gap={2} vAlign="center" className="resourceActions">
           <Button
-            label="导出"
+            label={copy.export}
             variant="secondary"
             icon={<Icon icon={ArrowDownTrayIcon} size="sm" />}
             isDisabled={total === 0}
             onClick={exportRows}
           />
           <Button
-            label="新增"
+            label={copy.addNew}
             icon={<Icon icon={PlusIcon} size="sm" />}
             onClick={() => {
               setDraft(emptyRecord(schema));
@@ -299,7 +307,12 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                     value={query.filters?.[field.key] ?? ''}
                     width="100%"
                     options={[
-                      {label: `全部${field.label}`, value: ''},
+                      {
+                        label: locale === 'zh'
+                          ? `${copy.all}${field.label}`
+                          : `${copy.all} ${field.label.toLowerCase()}`,
+                        value: '',
+                      },
                       ...(field.options ?? []).map(option => ({
                         label: option.label,
                         value: option.value,
@@ -319,7 +332,9 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                   value={query.filters?.[field.key] ?? ''}
                   width="100%"
                   onChange={value => setFilter(field.key, value)}
-                  placeholder={`请输入${field.label}`}
+                  placeholder={locale === 'zh'
+                    ? `${copy.enter}${field.label}`
+                    : `${copy.enter} ${field.label.toLowerCase()}`}
                   hasClear
                   type={field.kind === 'email' ? 'email' : 'text'}
                 />
@@ -327,13 +342,15 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
             );
           })}
           <Button
-            label="查询"
+            label={copy.search}
             icon={<Icon icon={MagnifyingGlassIcon} size="sm" />}
             onClick={refresh}
           />
-          <Button label="重置" variant="secondary" onClick={resetFilters} />
+          <Button label={copy.reset} variant="secondary" onClick={resetFilters} />
           <Button
-            label={`${primaryFieldLabel}${query.sortDirection === 'asc' ? '升序' : '降序'}`}
+            label={locale === 'zh'
+              ? `${primaryFieldLabel}${query.sortDirection === 'asc' ? copy.ascending : copy.descending}`
+              : `${primaryFieldLabel}: ${query.sortDirection === 'asc' ? copy.ascending : copy.descending}`}
             variant="secondary"
             icon={<Icon icon={ArrowsUpDownIcon} size="sm" />}
             onClick={() => setQuery(current => ({
@@ -347,15 +364,6 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
 
       <Card padding={0} className="tablePanel">
         <VStack gap={0}>
-          <HStack hAlign="between" vAlign="center" className="tableTitle">
-            <VStack gap={0}>
-              <Heading level={3}>数据列表</Heading>
-              <Text type="supporting" color="secondary">
-                {isLoading ? '正在加载...' : `共 ${total} 条记录`}
-              </Text>
-            </VStack>
-          </HStack>
-          <Divider />
           {rows.length > 0 ? (
             <Table<AdminRecord>
               tableProps={{className: 'resourceTable'}}
@@ -370,18 +378,26 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
             />
           ) : (
             <VStack gap={2} hAlign="center" className="emptyState">
-              <Heading level={3}>没有匹配结果</Heading>
-              <Text type="body" color="secondary">调整筛选条件后重试。</Text>
+              <Heading level={3}>{copy.noResults}</Heading>
+              <Text type="body" color="secondary">{copy.noResultsHint}</Text>
             </VStack>
           )}
           <Divider />
-          <HStack hAlign="end" className="paginationBar">
+          <HStack hAlign="between" vAlign="center" wrap="wrap" className="paginationBar">
+            <Text type="supporting" color="secondary">
+              {isLoading
+                ? copy.loading
+                : locale === 'zh'
+                  ? `共 ${total} ${copy.recordsPlural}`
+                  : `${total} ${total === 1 ? copy.record : copy.recordsPlural}`}
+            </Text>
             <Pagination
               page={query.page}
               pageSize={query.pageSize}
               totalItems={total}
               variant="pages"
               size="sm"
+              label={copy.pagination}
               onChange={page => setQuery(current => ({...current, page}))}
               pageSizeOptions={[5, 10, 20]}
               onPageSizeChange={pageSize => setQuery(current => ({...current, page: 1, pageSize}))}
@@ -400,7 +416,11 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
       >
         <VStack gap={0} className="dialogFrame formDialog">
           <StackItem className="dialogHeader">
-            <Heading level={2}>{dialogMode === 'create' ? `新增${schema.title}` : `编辑${schema.title}`}</Heading>
+            <Heading level={2}>
+              {dialogMode === 'create'
+                ? locale === 'zh' ? `${copy.add}${schema.title}` : `${copy.add} ${schema.title}`
+                : locale === 'zh' ? `${copy.edit}${schema.title}` : `${copy.edit} ${schema.title}`}
+            </Heading>
           </StackItem>
           <StackItem size="fill" className="dialogScrollArea">
             <VStack gap={4}>
@@ -413,6 +433,7 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
                   field={field}
                   value={draft[field.key]}
                   error={formErrors[field.key]}
+                  locale={locale}
                   onChange={value => {
                     setDraft(current => ({...current, [field.key]: value}));
                     setFormErrors(current => {
@@ -426,8 +447,8 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
             </VStack>
           </StackItem>
           <HStack hAlign="end" gap={2} className="dialogFooter">
-            <Button label="取消" variant="secondary" onClick={() => setDialogMode(null)} />
-            <Button label="保存" isLoading={isSaving} onClick={saveDraft} />
+            <Button label={copy.cancel} variant="secondary" onClick={() => setDialogMode(null)} />
+            <Button label={copy.save} isLoading={isSaving} onClick={saveDraft} />
           </HStack>
         </VStack>
       </Dialog>
@@ -442,17 +463,17 @@ export function ResourcePage({schema}: {schema: ResourceSchema}) {
       >
         <VStack gap={0} className="dialogFrame confirmDialog">
           <StackItem className="dialogHeader">
-            <Heading level={2}>删除记录</Heading>
+            <Heading level={2}>{copy.deleteTitle}</Heading>
           </StackItem>
           <StackItem className="dialogContent">
             <Text type="body" color="secondary">
-              删除后当前列表会立即更新。
+              {copy.deleteDescription}
             </Text>
           </StackItem>
           <HStack hAlign="end" gap={2} className="dialogFooter">
-            <Button label="取消" variant="secondary" onClick={() => setConfirmDelete(null)} />
+            <Button label={copy.cancel} variant="secondary" onClick={() => setConfirmDelete(null)} />
             <Button
-              label="确认删除"
+              label={copy.delete}
               variant="destructive"
               onClick={async () => {
                 if (confirmDelete) {

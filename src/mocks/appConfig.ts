@@ -1,87 +1,42 @@
+import type {Locale} from '../localization';
 import type {AppConfig} from '../types';
+import {createMockText} from './localized';
 
-export const appProfile = {
-  name: '通用后台管理',
-  operator: '系统管理员',
-  department: '平台管理部',
-  email: 'admin@example.com',
-};
+export function createAppConfig(locale: Locale): AppConfig {
+  const t = createMockText(locale);
+  const navigationGroup = t('Navigation', '导航');
+  const systemGroup = t('System Management', '系统管理');
 
-export const accountMenuActions = [
-  {id: 'settings', label: '设置'},
-  {id: 'theme', label: '主题'},
-  {id: 'notifications', label: '通知'},
-  {id: 'logout', label: '退出登录'},
-] as const;
-
-export const modules: AppConfig['modules'] = [
-  {
-    id: 'charts',
-    title: '首页',
-    kind: 'dashboard',
-    icon: 'dashboard',
-    group: '导航',
-  },
-  {
-    id: 'crud',
-    title: 'CRUD 管理',
-    kind: 'resource',
-    icon: 'users',
-    group: '导航',
-    resource: 'crud',
-  },
-  {
-    id: 'userCenter',
-    title: '用户中心',
-    kind: 'custom',
-    icon: 'profile',
-    group: '导航',
-  },
-  {
-    id: 'sysRoot',
-    title: '系统管理',
-    kind: 'group',
-    icon: 'settings',
-    group: '系统管理',
-    children: [
+  return {
+    profile: {
+      name: t('Admin Console', '通用后台管理'),
+      operator: t('System Administrator', '系统管理员'),
+      department: t('Platform Operations', '平台管理部'),
+      email: 'admin@example.com',
+    },
+    accountMenuActions: [
+      {id: 'settings', label: t('Settings', '设置')},
+      {id: 'theme', label: t('Theme', '主题')},
+      {id: 'notifications', label: t('Notifications', '通知')},
+      {id: 'logout', label: t('Sign out', '退出登录')},
+    ],
+    modules: [
+      {id: 'charts', title: t('Dashboard', '首页'), kind: 'dashboard', icon: 'dashboard', group: navigationGroup},
+      {id: 'crud', title: t('CRUD Management', 'CRUD 管理'), kind: 'resource', icon: 'users', group: navigationGroup, resource: 'crud'},
+      {id: 'userCenter', title: t('User Center', '用户中心'), kind: 'custom', icon: 'profile', group: navigationGroup},
       {
-        id: 'sysUser',
-        title: '用户管理',
-        kind: 'resource',
-        icon: 'users',
-        group: '系统管理',
-        resource: 'users',
-      },
-      {
-        id: 'sysRole',
-        title: '角色管理',
-        kind: 'resource',
-        icon: 'roles',
-        group: '系统管理',
-        resource: 'roles',
-      },
-      {
-        id: 'sysDept',
-        title: '部门管理',
-        kind: 'resource',
-        icon: 'departments',
-        group: '系统管理',
-        resource: 'departments',
-      },
-      {
-        id: 'sysMenu',
-        title: '菜单管理',
-        kind: 'resource',
+        id: 'sysRoot',
+        title: systemGroup,
+        kind: 'group',
         icon: 'settings',
-        group: '系统管理',
-        resource: 'menus',
+        group: systemGroup,
+        children: [
+          {id: 'sysUser', title: t('User Management', '用户管理'), kind: 'resource', icon: 'users', group: systemGroup, resource: 'users'},
+          {id: 'sysRole', title: t('Role Management', '角色管理'), kind: 'resource', icon: 'roles', group: systemGroup, resource: 'roles'},
+          {id: 'sysDept', title: t('Department Management', '部门管理'), kind: 'resource', icon: 'departments', group: systemGroup, resource: 'departments'},
+          {id: 'sysMenu', title: t('Menu Management', '菜单管理'), kind: 'resource', icon: 'settings', group: systemGroup, resource: 'menus'},
+        ],
       },
     ],
-  },
-];
-
-export const appConfig: AppConfig = {
-  profile: appProfile,
-  accountMenuActions: [...accountMenuActions],
-  modules,
-};
+  };
+}

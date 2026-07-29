@@ -5,12 +5,14 @@ import {DropdownMenu} from '@astryxdesign/core/DropdownMenu';
 import {StatusDot} from '@astryxdesign/core/StatusDot';
 import {ProgressBar} from '@astryxdesign/core/ProgressBar';
 import type {ResourceField} from '../types';
+import {uiCopy, type Locale} from '../localization';
 
 function optionFor(field: ResourceField, value: unknown) {
   return field.options?.find(option => option.value === String(value));
 }
 
-export function FieldValue({field, value}: {field: ResourceField; value: unknown}) {
+export function FieldValue({field, value, locale}: {field: ResourceField; value: unknown; locale: Locale}) {
+  const copy = uiCopy[locale].resource;
   if (field.kind === 'status') {
     const option = optionFor(field, value);
     return (
@@ -41,14 +43,14 @@ export function FieldValue({field, value}: {field: ResourceField; value: unknown
               label: `+${hiddenCount}`,
               size: 'sm',
               variant: 'secondary',
-              tooltip: '查看全部标签',
+              tooltip: copy.viewTags,
               className: 'tagMoreButton',
             }}
             hasChevron={false}
             items={[
               {
                 type: 'section',
-                title: '全部标签',
+                title: locale === 'zh' ? `全部${field.label}` : `All ${field.label.toLowerCase()}`,
                 items: tags.map(tag => ({label: tag})),
               },
             ]}
@@ -71,7 +73,11 @@ export function FieldValue({field, value}: {field: ResourceField; value: unknown
   }
 
   if (field.kind === 'currency') {
-    return <Text type="body">¥{Number(value).toLocaleString('zh-CN')}</Text>;
+    return (
+      <Text type="body">
+        {locale === 'zh' ? '¥' : '$'}{Number(value).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US')}
+      </Text>
+    );
   }
 
   if (field.kind === 'date') {

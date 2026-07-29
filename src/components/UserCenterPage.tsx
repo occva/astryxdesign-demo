@@ -23,6 +23,7 @@ import {
 } from '@heroicons/react/24/outline';
 import {mockApi} from '../services/mockApi';
 import type {SecuritySetting, UserCenterData, UserProfile} from '../types';
+import {uiCopy, type Locale} from '../localization';
 
 function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
   return (
@@ -37,7 +38,8 @@ function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
   );
 }
 
-export function UserCenterPage() {
+export function UserCenterPage({locale}: {locale: Locale}) {
+  const copy = uiCopy[locale].userCenter;
   const [data, setData] = useState<UserCenterData | null>(null);
   const [profileDraft, setProfileDraft] = useState<UserProfile | null>(null);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
@@ -67,12 +69,12 @@ export function UserCenterPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale]);
 
   if (!data) {
     return (
       <Card>
-        <Text type="body">正在加载用户中心...</Text>
+        <Text type="body">{copy.loading}</Text>
       </Card>
     );
   }
@@ -93,7 +95,7 @@ export function UserCenterPage() {
       setProfileMessage(null);
       setIsProfileDialogOpen(false);
     } catch (error) {
-      setProfileMessage(error instanceof Error ? error.message : '资料保存失败，请重试。');
+      setProfileMessage(error instanceof Error ? error.message : copy.profileSaveFailed);
     } finally {
       setIsProfileSaving(false);
     }
@@ -111,14 +113,18 @@ export function UserCenterPage() {
       const next = await mockApi.updateSecuritySettings(nextSettings);
       setData(current => current ? {...current, securitySettings: next} : current);
     } catch (error) {
-      setSecurityMessage(error instanceof Error ? error.message : '安全设置保存失败，已恢复原设置。');
+      setSecurityMessage(error instanceof Error ? error.message : copy.securitySaveFailed);
       setData(current => current ? {...current, securitySettings: previous} : current);
     } finally {
       setSavingSecurityKey(null);
     }
   };
 
-  const profileStatusColor = data.profile.status === '离线待命' ? 'gray' : data.profile.status === '忙碌处理中' ? 'orange' : 'green';
+  const profileStatusColor = data.profile.status === copy.offlineStatus
+    ? 'gray'
+    : data.profile.status === copy.busyStatus
+      ? 'orange'
+      : 'green';
 
   return (
     <VStack gap={5} className="userCenterPage">
@@ -143,13 +149,13 @@ export function UserCenterPage() {
           </HStack>
           <HStack gap={2} vAlign="center" className="profileActions">
             <Button
-              label="编辑资料"
+              label={copy.editProfile}
               variant="secondary"
               icon={<Icon icon={PencilSquareIcon} size="sm" />}
               onClick={openProfileDialog}
             />
             <Button
-              label="安全设置"
+              label={copy.securitySettings}
               icon={<Icon icon={ShieldCheckIcon} size="sm" />}
               onClick={() => setIsSecurityDialogOpen(true)}
             />
@@ -164,7 +170,7 @@ export function UserCenterPage() {
               <HStack gap={3} vAlign="center">
                 <Icon icon={IdentificationIcon} size="md" />
                 <VStack gap={0}>
-                  <Heading level={3}>基本资料</Heading>
+                  <Heading level={3}>{copy.profileDetails}</Heading>
                 </VStack>
               </HStack>
               <Divider />
@@ -177,14 +183,14 @@ export function UserCenterPage() {
               <HStack gap={3} vAlign="center">
                 <Icon icon={PhoneIcon} size="md" />
                 <VStack gap={0}>
-                  <Heading level={3}>联系方式</Heading>
+                  <Heading level={3}>{copy.contactDetails}</Heading>
                 </VStack>
               </HStack>
               <Divider />
               <DetailGrid items={data.contactDetails} />
               <HStack gap={2} wrap="wrap">
                 <Button
-                  label="发送邮件"
+                  label={copy.sendEmail}
                   variant="secondary"
                   icon={<Icon icon={EnvelopeIcon} size="sm" />}
                   onClick={() => {
@@ -192,7 +198,7 @@ export function UserCenterPage() {
                   }}
                 />
                 <Button
-                  label="拨打电话"
+                  label={copy.callPhone}
                   variant="secondary"
                   icon={<Icon icon={PhoneIcon} size="sm" />}
                   onClick={() => {
@@ -210,7 +216,7 @@ export function UserCenterPage() {
               <HStack gap={3} vAlign="center">
                 <Icon icon={BuildingOffice2Icon} size="md" />
                 <VStack gap={0}>
-                  <Heading level={3}>组织身份</Heading>
+                  <Heading level={3}>{copy.organization}</Heading>
                 </VStack>
               </HStack>
               <Divider />
@@ -234,7 +240,7 @@ export function UserCenterPage() {
       >
         <VStack gap={0} className="dialogFrame formDialog">
           <StackItem className="dialogHeader">
-            <Heading level={2}>编辑资料</Heading>
+            <Heading level={2}>{copy.editTitle}</Heading>
           </StackItem>
           <StackItem size="fill" className="dialogScrollArea">
             {profileDraft ? (
@@ -244,44 +250,44 @@ export function UserCenterPage() {
                 ) : null}
                 <Grid columns={{minWidth: 220}} gap={4}>
                   <TextInput
-                    label="姓名"
+                    label={copy.name}
                     value={profileDraft.name}
                     isRequired
                     onChange={name => setProfileDraft(current => current ? {...current, name} : current)}
                   />
                   <TextInput
-                    label="岗位"
+                    label={copy.jobTitle}
                     value={profileDraft.title}
                     onChange={title => setProfileDraft(current => current ? {...current, title} : current)}
                   />
                   <TextInput
-                    label="所属部门"
+                    label={copy.department}
                     value={profileDraft.department}
                     onChange={department => setProfileDraft(current => current ? {...current, department} : current)}
                   />
                   <TextInput
-                    label="直属上级"
+                    label={copy.manager}
                     value={profileDraft.manager}
                     onChange={manager => setProfileDraft(current => current ? {...current, manager} : current)}
                   />
                   <TextInput
-                    label="邮箱"
+                    label={copy.email}
                     value={profileDraft.email}
                     type="email"
                     onChange={email => setProfileDraft(current => current ? {...current, email} : current)}
                   />
                   <TextInput
-                    label="手机号"
+                    label={copy.phone}
                     value={profileDraft.phone}
                     onChange={phone => setProfileDraft(current => current ? {...current, phone} : current)}
                   />
                   <TextInput
-                    label="办公地点"
+                    label={copy.location}
                     value={profileDraft.location}
                     onChange={location => setProfileDraft(current => current ? {...current, location} : current)}
                   />
                   <Selector
-                    label="当前状态"
+                    label={copy.status}
                     value={profileDraft.status}
                     options={data.statusOptions}
                     onChange={status => setProfileDraft(current => current ? {...current, status} : current)}
@@ -291,8 +297,8 @@ export function UserCenterPage() {
             ) : null}
           </StackItem>
           <HStack hAlign="end" gap={2} className="dialogFooter">
-            <Button label="取消" variant="secondary" onClick={() => setIsProfileDialogOpen(false)} />
-            <Button label="保存" isLoading={isProfileSaving} onClick={saveProfile} />
+            <Button label={copy.cancel} variant="secondary" onClick={() => setIsProfileDialogOpen(false)} />
+            <Button label={copy.save} isLoading={isProfileSaving} onClick={saveProfile} />
           </HStack>
         </VStack>
       </Dialog>
@@ -307,7 +313,7 @@ export function UserCenterPage() {
       >
         <VStack gap={0} className="dialogFrame">
           <StackItem className="dialogHeader">
-            <Heading level={2}>安全设置</Heading>
+            <Heading level={2}>{copy.securityTitle}</Heading>
           </StackItem>
           <StackItem className="dialogContent">
             <VStack gap={4}>
@@ -336,7 +342,7 @@ export function UserCenterPage() {
             </VStack>
           </StackItem>
           <HStack hAlign="end" gap={2} className="dialogFooter">
-            <Button label="完成" onClick={() => setIsSecurityDialogOpen(false)} />
+            <Button label={copy.done} onClick={() => setIsSecurityDialogOpen(false)} />
           </HStack>
         </VStack>
       </Dialog>

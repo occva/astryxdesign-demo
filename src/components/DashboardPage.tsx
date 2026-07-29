@@ -12,6 +12,7 @@ import {Icon} from '@astryxdesign/core/Icon';
 import {ArrowPathIcon} from '@heroicons/react/24/outline';
 import {mockApi} from '../services/mockApi';
 import type {DashboardData, DashboardMetric} from '../types';
+import {uiCopy, type Locale} from '../localization';
 
 function MetricCard({metric}: {metric: DashboardMetric}) {
   const color = metric.tone === 'negative' ? 'red' : metric.tone === 'positive' ? 'green' : 'blue';
@@ -44,7 +45,8 @@ function TrendBars({data}: {data: DashboardData['trend']}) {
   );
 }
 
-export function DashboardPage() {
+export function DashboardPage({locale}: {locale: Locale}) {
+  const copy = uiCopy[locale].dashboard;
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,12 +62,12 @@ export function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [locale]);
 
   if (!data) {
     return (
       <Card>
-        <Text type="body">{isLoading ? '正在加载工作台...' : '暂无工作台数据'}</Text>
+        <Text type="body">{isLoading ? copy.loading : copy.empty}</Text>
       </Card>
     );
   }
@@ -73,9 +75,9 @@ export function DashboardPage() {
   return (
     <VStack gap={6}>
       <HStack hAlign="between" vAlign="center" wrap="wrap">
-        <Heading level={1}>首页</Heading>
+        <Heading level={1}>{copy.title}</Heading>
         <Button
-          label="刷新数据"
+          label={copy.refresh}
           variant="secondary"
           icon={<Icon icon={ArrowPathIcon} size="sm" />}
           isLoading={isLoading}
@@ -97,8 +99,8 @@ export function DashboardPage() {
         <Card>
           <VStack gap={5}>
             <HStack hAlign="between" vAlign="center">
-              <Heading level={3}>近 12 月业务趋势</Heading>
-              <Token label="12 个月" color="blue" size="sm" />
+              <Heading level={3}>{copy.trendTitle}</Heading>
+              <Token label={copy.months} color="blue" size="sm" />
             </HStack>
             <TrendBars data={data.trend} />
           </VStack>
@@ -106,14 +108,14 @@ export function DashboardPage() {
 
         <Card>
           <VStack gap={5}>
-            <Heading level={3}>模块占比</Heading>
+            <Heading level={3}>{copy.distribution}</Heading>
             {data.modules.map(item => (
               <VStack key={item.label} gap={2}>
                 <HStack hAlign="between" vAlign="center">
                   <Text type="body">{item.label}</Text>
                   <Token label={`${item.value}%`} color={item.color ?? 'gray'} size="sm" />
                 </HStack>
-                <ProgressBar value={item.value} max={item.capacity} label={`${item.label} 容量`} isLabelHidden />
+                <ProgressBar value={item.value} max={item.capacity} label={`${item.label} ${copy.capacity}`} isLabelHidden />
               </VStack>
             ))}
           </VStack>
@@ -123,8 +125,8 @@ export function DashboardPage() {
       <Card>
         <VStack gap={4}>
           <HStack hAlign="between" vAlign="center">
-            <Heading level={3}>系统动态</Heading>
-            <Text type="supporting" color="secondary">最近更新</Text>
+            <Heading level={3}>{copy.activity}</Heading>
+            <Text type="supporting" color="secondary">{copy.latest}</Text>
           </HStack>
           <Divider />
           {data.activities.map(activity => (

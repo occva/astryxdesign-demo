@@ -32,6 +32,7 @@ import {
   BellIcon,
   Cog6ToothIcon,
   EnvelopeIcon,
+  LanguageIcon,
   LockClosedIcon,
   SunIcon,
   UserIcon,
@@ -44,6 +45,7 @@ import {DashboardPage} from './components/DashboardPage';
 import {ResourcePage} from './components/ResourcePage';
 import {UserCenterPage} from './components/UserCenterPage';
 import {ModuleIcon} from './components/icons';
+import {LOCALE_STORAGE_KEY, localeMeta, uiCopy, type Locale} from './localization';
 
 type AuthMode = 'login' | 'register';
 
@@ -81,12 +83,17 @@ function findParentModule(items: AppModule[], pageId: string, parent?: AppModule
 function AuthPage({
   appConfig,
   authUsers,
+  locale,
+  onLocaleToggle,
   onComplete,
 }: {
   appConfig: AppConfig;
   authUsers: AuthUser[];
+  locale: Locale;
+  onLocaleToggle: () => void;
   onComplete: (session: AuthSession) => void;
 }) {
+  const copy = uiCopy[locale].auth;
   const defaultUser = authUsers[0] ?? {name: '', email: '', password: ''};
   const [mode, setMode] = useState<AuthMode>('login');
   const [name, setName] = useState(defaultUser.name);
@@ -102,15 +109,15 @@ function AuthPage({
   };
   const submit = async () => {
     if (isRegister && name.trim().length === 0) {
-      setMessage('请输入姓名后再注册。');
+      setMessage(copy.nameRequired);
       return;
     }
     if (!email.includes('@')) {
-      setMessage('请输入有效的邮箱地址。');
+      setMessage(copy.emailInvalid);
       return;
     }
     if (password.length < 6) {
-      setMessage('密码至少需要 6 位。');
+      setMessage(copy.passwordShort);
       return;
     }
     setIsSubmitting(true);
@@ -124,7 +131,7 @@ function AuthPage({
       setMessage(null);
       onComplete(session);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '认证失败，请重试。');
+      setMessage(error instanceof Error ? error.message : copy.failed);
     } finally {
       setIsSubmitting(false);
     }
@@ -134,6 +141,15 @@ function AuthPage({
     <AppShell height="fill" variant="wash" contentPadding={0} mobileNav={false}>
       <Center minHeight="100dvh" width="100%" className="authPage">
         <VStack gap={4} className="authPanel">
+          <HStack hAlign="end" width="100%">
+            <Button
+              label={locale === 'en' ? '中文' : 'EN'}
+              size="sm"
+              variant="ghost"
+              icon={<Icon icon={LanguageIcon} size="sm" />}
+              onClick={onLocaleToggle}
+            />
+          </HStack>
           <VStack gap={2} hAlign="center">
             <img
               className="authBrandIcon"
@@ -146,14 +162,17 @@ function AuthPage({
           <Card padding={8} width="100%">
             <VStack gap={4}>
               <VStack gap={1}>
-                <Heading level={1}>{isRegister ? '注册账号' : '登录账号'}</Heading>
+                <Heading level={1}>{isRegister ? copy.registerTitle : copy.loginTitle}</Heading>
+                <Text type="supporting" color="secondary">
+                  {isRegister ? copy.registerDescription : copy.loginDescription}
+                </Text>
               </VStack>
               {message ? (
                 <Banner status="error" title={message} container="card" />
               ) : null}
               {isRegister ? (
                 <TextInput
-                  label="姓名"
+                  label={copy.name}
                   value={name}
                   startIcon={UserIcon}
                   isRequired
@@ -162,7 +181,7 @@ function AuthPage({
                 />
               ) : null}
               <TextInput
-                label="邮箱"
+                label={copy.email}
                 value={email}
                 type="email"
                 startIcon={EnvelopeIcon}
@@ -171,7 +190,7 @@ function AuthPage({
                 onChange={setEmail}
               />
               <TextInput
-                label="密码"
+                label={copy.password}
                 value={password}
                 type="password"
                 startIcon={LockClosedIcon}
@@ -179,7 +198,7 @@ function AuthPage({
                 onChange={setPassword}
               />
               <Button
-                label={isRegister ? '注册并进入' : '登录'}
+                label={isRegister ? copy.registerAction : copy.loginAction}
                 variant="primary"
                 icon={<Icon icon={ArrowRightEndOnRectangleIcon} size="sm" />}
                 isLoading={isSubmitting}
@@ -187,7 +206,7 @@ function AuthPage({
               />
               <HStack gap={1} hAlign="center" wrap="wrap">
                 <Text type="supporting" color="secondary">
-                  {isRegister ? '已有账号？' : '还没有账号？'}
+                  {isRegister ? copy.hasAccount : copy.newHere}
                 </Text>
                 <Link
                   href={isRegister ? '#login' : '#register'}
@@ -197,7 +216,7 @@ function AuthPage({
                     switchMode(isRegister ? 'login' : 'register');
                   }}
                 >
-                  {isRegister ? '返回登录' : '立即注册'}
+                  {isRegister ? copy.loginAction : copy.registerTitle}
                 </Link>
               </HStack>
             </VStack>
@@ -210,15 +229,18 @@ function AuthPage({
 
 function NotificationCenter({
   notifications,
+  locale,
   onMarkRead,
   onMarkAllRead,
   onClose,
 }: {
   notifications: AppNotification[];
+  locale: Locale;
   onMarkRead: (id: string) => void;
   onMarkAllRead: () => void;
   onClose: () => void;
 }) {
+  const copy = uiCopy[locale].notifications;
   const unreadCount = notifications.filter(item => !item.isRead).length;
 
   return (
@@ -234,10 +256,10 @@ function NotificationCenter({
         <StackItem className="dialogHeader">
           <HStack hAlign="between" vAlign="center" gap={3}>
             <VStack gap={0}>
-              <Heading level={2}>通知中心</Heading>
+              <Heading level={2}>{copy.title}</Heading>
             </VStack>
             <Button
-              label="全部已读"
+              label={copy.markAllRead}
               size="sm"
               variant="secondary"
               isDisabled={unreadCount === 0}
@@ -256,7 +278,7 @@ function NotificationCenter({
                   onClick={() => onMarkRead(item.id)}
                   endContent={
                     <Token
-                      label={item.isRead ? '已读' : '未读'}
+                      label={item.isRead ? copy.read : copy.unread}
                       color={item.isRead ? 'gray' : notificationColors[item.status]}
                       size="sm"
                     />
@@ -265,11 +287,11 @@ function NotificationCenter({
               ))}
             </List>
           ) : (
-            <Text type="body" color="secondary">暂无数据</Text>
+            <Text type="body" color="secondary">{copy.empty}</Text>
           )}
         </StackItem>
         <HStack hAlign="end" gap={2} className="dialogFooter">
-          <Button label="关闭" onClick={onClose} />
+          <Button label={copy.close} onClick={onClose} />
         </HStack>
       </VStack>
     </Dialog>
@@ -278,6 +300,10 @@ function NotificationCenter({
 
 export function App() {
   const sideNavHandleRef = useRef<SideNavImperativeCollapseHandle>(null);
+  const [locale, setLocale] = useState<Locale>(() => {
+    if (typeof window === 'undefined') return 'en';
+    return window.localStorage.getItem(LOCALE_STORAGE_KEY) === 'zh' ? 'zh' : 'en';
+  });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isSessionChecked, setIsSessionChecked] = useState(false);
   const [currentSession, setCurrentSession] = useState<AuthSession | null>(null);
@@ -289,8 +315,13 @@ export function App() {
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false);
   const [schemas, setSchemas] = useState<ResourceSchema[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>('light');
+  const copy = uiCopy[locale];
 
   useEffect(() => {
+    mockApi.setLocale(locale);
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+    document.documentElement.lang = localeMeta[locale].htmlLang;
+    document.title = locale === 'zh' ? '通用后台管理' : 'Admin Console';
     mockApi.getAppConfig().then(setAppConfig);
     mockApi.getAuthUsers().then(setAuthUsers);
     mockApi.getSession().then(session => {
@@ -300,7 +331,13 @@ export function App() {
     });
     mockApi.getNotifications().then(setNotifications);
     mockApi.getSchemas().then(setSchemas);
-  }, []);
+  }, [locale]);
+
+  const toggleLocale = () => {
+    const nextLocale: Locale = locale === 'en' ? 'zh' : 'en';
+    mockApi.setLocale(nextLocale);
+    setLocale(nextLocale);
+  };
 
   const modules = appConfig?.modules ?? [];
   const appProfile = appConfig?.profile;
@@ -316,7 +353,7 @@ export function App() {
     () => activeModule ? findParentModule(modules, activeModule.id) : undefined,
     [modules, activeModule?.id],
   );
-  const activeGroup = activeModule?.group === '导航' ? null : activeModule?.group;
+  const activeGroup = activeModule?.group === copy.navigationGroup ? null : activeModule?.group;
   const groupLanding = activeGroup
     ? firstLeafModule(modules.find(item => item.group === activeGroup) ?? activeModule!)
     : undefined;
@@ -366,7 +403,9 @@ export function App() {
     }
     if (item.id === 'theme') {
       return {
-        label: themeMode === 'dark' ? '切换浅色主题' : '切换深色主题',
+        label: themeMode === 'dark'
+          ? locale === 'zh' ? '切换浅色主题' : 'Switch to light theme'
+          : locale === 'zh' ? '切换深色主题' : 'Switch to dark theme',
         icon: SunIcon,
         onClick: () => setThemeMode(current => current === 'dark' ? 'light' : 'dark'),
       };
@@ -395,7 +434,7 @@ export function App() {
       <Theme theme={neutralTheme} mode={themeMode}>
         <AppShell height="fill" variant="wash" contentPadding={4} mobileNav={false}>
           <Card>
-            <Text type="body">正在加载...</Text>
+            <Text type="body">{copy.loading}</Text>
           </Card>
         </AppShell>
       </Theme>
@@ -408,6 +447,8 @@ export function App() {
         <AuthPage
           appConfig={appConfig}
           authUsers={authUsers}
+          locale={locale}
+          onLocaleToggle={toggleLocale}
           onComplete={session => {
             setCurrentSession(session);
             setIsAuthenticated(true);
@@ -423,7 +464,7 @@ export function App() {
       <Theme theme={neutralTheme} mode={themeMode}>
         <AppShell height="fill" variant="wash" contentPadding={4} mobileNav={false}>
           <Card>
-            <Text type="body">正在加载...</Text>
+            <Text type="body">{copy.loading}</Text>
           </Card>
         </AppShell>
       </Theme>
@@ -470,7 +511,7 @@ export function App() {
           <SideNav
             className="adminSideNav"
             handleRef={sideNavHandleRef}
-            collapsible={{defaultIsCollapsed: false, hasButton: false, buttonLabel: '折叠导航'}}
+            collapsible={{defaultIsCollapsed: false, hasButton: false, buttonLabel: copy.collapseNavigation}}
             header={
               <SideNavHeading
                 heading={appProfile.name}
@@ -502,7 +543,7 @@ export function App() {
                 <MoreMenu
                   className="accountMenu"
                   data-testid="account-menu"
-                  label="账号菜单"
+                  label={copy.accountMenu}
                   size="sm"
                   variant="ghost"
                   items={accountMenuItems}
@@ -526,7 +567,7 @@ export function App() {
                 <Icon icon={Bars3Icon} size="sm" />
               </SideNavCollapseButton>
               <ModuleIcon name={activeModule.icon} />
-              <Breadcrumbs variant="supporting" label="页面路径" className="breadcrumbs">
+              <Breadcrumbs variant="supporting" label={locale === 'zh' ? '页面路径' : 'Page path'} className="breadcrumbs">
                 {activeParent ? (
                   <BreadcrumbItem
                     href="#"
@@ -551,6 +592,13 @@ export function App() {
                 <BreadcrumbItem isCurrent>{activeModule.title}</BreadcrumbItem>
               </Breadcrumbs>
             </HStack>
+            <Button
+              label={locale === 'en' ? '中文' : 'EN'}
+              size="sm"
+              variant="ghost"
+              icon={<Icon icon={LanguageIcon} size="sm" />}
+              onClick={toggleLocale}
+            />
           </HStack>
           <Divider />
           <HStack gap={1} vAlign="center" className="navTabs">
@@ -583,14 +631,14 @@ export function App() {
           <Divider />
           <StackItem size="fill" className="pageContent">
             {activeModule.kind === 'dashboard' ? (
-              <DashboardPage />
+              <DashboardPage locale={locale} />
             ) : activeModule.id === 'userCenter' ? (
-              <UserCenterPage />
+              <UserCenterPage locale={locale} />
             ) : activeSchema ? (
-              <ResourcePage schema={activeSchema} />
+              <ResourcePage schema={activeSchema} locale={locale} />
             ) : (
               <Card>
-                <Text type="body">正在加载...</Text>
+                <Text type="body">{copy.noPage}</Text>
               </Card>
             )}
           </StackItem>
@@ -598,6 +646,7 @@ export function App() {
         {isNotificationCenterOpen ? (
           <NotificationCenter
             notifications={notifications}
+            locale={locale}
             onMarkRead={id => {
               void markNotificationRead(id);
             }}
