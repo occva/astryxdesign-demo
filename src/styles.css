@@ -21,20 +21,3 @@ body {
   margin: 0;
   background: var(--color-kumo-canvas);
 }
-
-.trend-bar-target,
-.trend-bar-value {
-  display: block;
-  width: 0.55rem;
-  min-height: 0.25rem;
-  border-radius: 0.375rem 0.375rem 0 0;
-}
-
-.trend-bar-target {
-  background: color-mix(in srgb, var(--color-kumo-contrast) 18%, transparent);
-  border: 1px solid var(--color-kumo-line);
-}
-
-.trend-bar-value {
-  background: var(--color-kumo-brand);
-}
