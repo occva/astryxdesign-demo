@@ -1,4 +1,4 @@
-import {useEffect, useId, useState, type ChangeEvent} from 'react';
+import {useEffect, useId, useState, type ChangeEvent, type ReactElement, type ReactNode} from 'react';
 import {Banner} from '@cloudflare/kumo/components/banner';
 import {Button} from '@cloudflare/kumo/components/button';
 import {Dialog} from '@cloudflare/kumo/components/dialog';
@@ -36,6 +36,27 @@ function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
         </div>
       ))}
     </dl>
+  );
+}
+
+function ProfileFormSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactElement;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-kumo-line p-4">
+      <div className="flex flex-col gap-4">
+        <SectionTitle
+          title={<span className="inline-flex items-center gap-2">{icon}{title}</span>}
+        />
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -77,92 +98,107 @@ function ProfileDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
-        <div className="flex flex-col gap-5">
+      <Dialog size="xl" className="flex max-h-[88dvh] flex-col overflow-hidden p-0">
+        <div className="border-b border-kumo-line px-6 py-5">
           <Dialog.Title>{copy.editTitle}</Dialog.Title>
+        </div>
+        <div className="min-h-0 overflow-y-auto px-6 py-5">
           {profileDraft ? (
-            <>
+            <div className="flex flex-col gap-4">
               {message ? <Banner variant="error" title={message} /> : null}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex items-center gap-4 rounded-lg border border-kumo-line p-4 sm:col-span-2">
-                  <Avatar name={profileDraft.name} src={profileDraft.avatarUrl} size="lg" />
-                  <div className="min-w-0 flex-1">
-                    <Text as="span" size="sm" bold>{copy.avatar}</Text>
-                    <input
-                      id={avatarInputId}
-                      className="sr-only"
-                      type="file"
-                      accept="image/*"
-                      onChange={updateAvatar}
+              <div className="flex flex-col gap-4">
+                <section className="rounded-lg border border-kumo-line p-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <Avatar
+                      name={profileDraft.name}
+                      src={profileDraft.avatarUrl}
+                      className="size-20 border border-kumo-line shadow-sm"
                     />
-                    <label
-                      className="mt-2 inline-flex cursor-pointer items-center rounded-lg border border-kumo-line bg-kumo-elevated px-3 py-1.5 text-sm font-medium text-kumo-strong hover:bg-kumo-tint"
-                      htmlFor={avatarInputId}
-                    >
-                      {copy.chooseAvatar}
-                    </label>
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      <div className="min-w-0">
+                        <Text size="sm" bold>{copy.avatar}</Text>
+                        <Text variant="secondary" size="sm">{copy.avatarHint}</Text>
+                      </div>
+                      <div>
+                        <input
+                          id={avatarInputId}
+                          className="sr-only"
+                          type="file"
+                          accept="image/*"
+                          onChange={updateAvatar}
+                        />
+                        <label
+                          className="inline-flex cursor-pointer items-center rounded-lg border border-kumo-line bg-kumo-elevated px-3 py-1.5 text-sm font-medium text-kumo-strong hover:bg-kumo-tint"
+                          htmlFor={avatarInputId}
+                        >
+                          {copy.chooseAvatar}
+                        </label>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <FormInput
-                  label={copy.name}
-                  value={profileDraft.name}
-                  required
-                  onValueChange={name => onDraftChange({...profileDraft, name})}
-                />
-                <FormInput
-                  label={copy.jobTitle}
-                  value={profileDraft.title}
-                  onValueChange={title => onDraftChange({...profileDraft, title})}
-                />
-                <FormInput
-                  label={copy.department}
-                  value={profileDraft.department}
-                  onValueChange={department => onDraftChange({...profileDraft, department})}
-                />
-                <FormInput
-                  label={copy.manager}
-                  value={profileDraft.manager}
-                  onValueChange={manager => onDraftChange({...profileDraft, manager})}
-                />
-                <FormInput
-                  label={copy.email}
-                  value={profileDraft.email}
-                  type="email"
-                  onValueChange={email => onDraftChange({...profileDraft, email})}
-                />
-                <FormInput
-                  label={copy.phone}
-                  value={profileDraft.phone}
-                  onValueChange={phone => onDraftChange({...profileDraft, phone})}
-                />
-                <FormInput
-                  label={copy.enterpriseWechat}
-                  value={profileDraft.enterpriseWechat}
-                  onValueChange={enterpriseWechat => onDraftChange({...profileDraft, enterpriseWechat})}
-                />
-                <FormInput
-                  label={copy.emergencyContact}
-                  value={profileDraft.emergencyContact}
-                  onValueChange={emergencyContact => onDraftChange({...profileDraft, emergencyContact})}
-                />
-                <FormInput
-                  label={copy.location}
-                  value={profileDraft.location}
-                  onValueChange={location => onDraftChange({...profileDraft, location})}
-                />
-                <FormSelect
-                  label={copy.status}
-                  value={profileDraft.status}
-                  options={data.statusOptions}
-                  onValueChange={status => onDraftChange({...profileDraft, status})}
-                />
+                </section>
+
+                <ProfileFormSection
+                  title={copy.profileDetails}
+                  icon={<IdentificationCard className="size-5" />}
+                >
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormInput
+                      label={copy.name}
+                      value={profileDraft.name}
+                      required
+                      onValueChange={name => onDraftChange({...profileDraft, name})}
+                    />
+                    <FormInput
+                      label={copy.location}
+                      value={profileDraft.location}
+                      onValueChange={location => onDraftChange({...profileDraft, location})}
+                    />
+                    <FormSelect
+                      label={copy.status}
+                      value={profileDraft.status}
+                      options={data.statusOptions}
+                      onValueChange={status => onDraftChange({...profileDraft, status})}
+                    />
+                  </div>
+                </ProfileFormSection>
+
+                <ProfileFormSection
+                  title={copy.contactDetails}
+                  icon={<Phone className="size-5" />}
+                >
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FormInput
+                      label={copy.email}
+                      value={profileDraft.email}
+                      type="email"
+                      onValueChange={email => onDraftChange({...profileDraft, email})}
+                    />
+                    <FormInput
+                      label={copy.phone}
+                      value={profileDraft.phone}
+                      onValueChange={phone => onDraftChange({...profileDraft, phone})}
+                    />
+                    <FormInput
+                      label={copy.enterpriseWechat}
+                      value={profileDraft.enterpriseWechat}
+                      onValueChange={enterpriseWechat => onDraftChange({...profileDraft, enterpriseWechat})}
+                    />
+                    <FormInput
+                      label={copy.emergencyContact}
+                      value={profileDraft.emergencyContact}
+                      onValueChange={emergencyContact => onDraftChange({...profileDraft, emergencyContact})}
+                    />
+                  </div>
+                </ProfileFormSection>
+
               </div>
-            </>
+            </div>
           ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => onOpenChange(false)}>{copy.cancel}</Button>
-            <Button variant="primary" loading={isSaving} onClick={onSave}>{copy.save}</Button>
-          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-kumo-line bg-kumo-elevated px-6 py-4">
+          <Button variant="secondary" onClick={() => onOpenChange(false)}>{copy.cancel}</Button>
+          <Button variant="primary" loading={isSaving} onClick={onSave}>{copy.save}</Button>
         </div>
       </Dialog>
     </Dialog.Root>
