@@ -1,20 +1,13 @@
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {lazy, Suspense, useEffect, useMemo, useRef, useState} from 'react';
 import {AppShell} from '@astryxdesign/core/AppShell';
 import {Avatar} from '@astryxdesign/core/Avatar';
-import {Banner} from '@astryxdesign/core/Banner';
 import {BreadcrumbItem, Breadcrumbs} from '@astryxdesign/core/Breadcrumbs';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
-import {Center} from '@astryxdesign/core/Center';
-import {Dialog} from '@astryxdesign/core/Dialog';
 import {Divider} from '@astryxdesign/core/Divider';
-import {Link} from '@astryxdesign/core/Link';
-import {List, ListItem} from '@astryxdesign/core/List';
 import {MoreMenu} from '@astryxdesign/core/MoreMenu';
 import {Heading, Text} from '@astryxdesign/core/Text';
-import {TextInput} from '@astryxdesign/core/TextInput';
 import {HStack, StackItem, VStack} from '@astryxdesign/core/Stack';
-import {Token} from '@astryxdesign/core/Token';
 import {Theme} from '@astryxdesign/core/theme';
 import type {ThemeMode} from '@astryxdesign/core/theme';
 import {
@@ -31,30 +24,29 @@ import {
   Bars3Icon,
   BellIcon,
   Cog6ToothIcon,
-  EnvelopeIcon,
   LanguageIcon,
-  LockClosedIcon,
   SunIcon,
-  UserIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import {neutralTheme} from '@astryxdesign/theme-neutral/built';
 import {mockApi} from './services/mockApi';
-import type {AppConfig, AppModule, AppNotification, AuthSession, AuthUser, ResourceSchema, SelectOption} from './types';
-import {DashboardPage} from './components/DashboardPage';
-import {ResourcePage} from './components/ResourcePage';
-import {UserCenterPage} from './components/UserCenterPage';
+import type {AppConfig, AppModule, AppNotification, AuthSession, AuthUser, ResourceSchema} from './types';
 import {ModuleIcon} from './components/icons';
+import {NotificationCenter} from './components/NotificationCenter';
 import {LOCALE_STORAGE_KEY, localeMeta, uiCopy, type Locale} from './localization';
 
-type AuthMode = 'login' | 'register';
+const AuthPage = lazy(() => import('./components/AuthPage').then(module => ({default: module.AuthPage})));
+const DashboardPage = lazy(() => import('./components/DashboardPage').then(module => ({default: module.DashboardPage})));
+const ResourcePage = lazy(() => import('./components/ResourcePage').then(module => ({default: module.ResourcePage})));
+const UserCenterPage = lazy(() => import('./components/UserCenterPage').then(module => ({default: module.UserCenterPage})));
 
-const notificationColors: Record<AppNotification['status'], SelectOption['color']> = {
-  info: 'blue',
-  success: 'green',
-  warning: 'orange',
-  error: 'red',
-};
+function PageFallback() {
+  return (
+    <Card>
+      <Text type="body">…</Text>
+    </Card>
+  );
+}
 
 function groupedModules(modules: AppModule[]) {
   return modules.reduce<Record<string, AppModule[]>>((groups, item) => {
@@ -78,224 +70,6 @@ function findParentModule(items: AppModule[], pageId: string, parent?: AppModule
     if (nested) return nested;
   }
   return undefined;
-}
-
-function AuthPage({
-  appConfig,
-  authUsers,
-  locale,
-  onLocaleToggle,
-  onComplete,
-}: {
-  appConfig: AppConfig;
-  authUsers: AuthUser[];
-  locale: Locale;
-  onLocaleToggle: () => void;
-  onComplete: (session: AuthSession) => void;
-}) {
-  const copy = uiCopy[locale].auth;
-  const defaultUser = authUsers[0] ?? {name: '', email: '', password: ''};
-  const [mode, setMode] = useState<AuthMode>('login');
-  const [name, setName] = useState(defaultUser.name);
-  const [email, setEmail] = useState(defaultUser.email);
-  const [password, setPassword] = useState(defaultUser.password);
-  const [message, setMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const isRegister = mode === 'register';
-  const switchMode = (nextMode: AuthMode) => {
-    setMode(nextMode);
-    setMessage(null);
-  };
-  const submit = async () => {
-    if (isRegister && name.trim().length === 0) {
-      setMessage(copy.nameRequired);
-      return;
-    }
-    if (!email.includes('@')) {
-      setMessage(copy.emailInvalid);
-      return;
-    }
-    if (password.length < 6) {
-      setMessage(copy.passwordShort);
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      let session: AuthSession;
-      if (isRegister) {
-        session = await mockApi.registerAuthUser({name, email, password});
-      } else {
-        session = await mockApi.login(email, password);
-      }
-      setMessage(null);
-      onComplete(session);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : copy.failed);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <AppShell height="fill" variant="wash" contentPadding={0} mobileNav={false}>
-      <Center minHeight="100dvh" width="100%" className="authPage">
-        <VStack gap={4} className="authPanel">
-          <HStack hAlign="end" width="100%">
-            <Button
-              label={locale === 'en' ? '中文' : 'EN'}
-              size="sm"
-              variant="ghost"
-              icon={<Icon icon={LanguageIcon} size="sm" />}
-              onClick={onLocaleToggle}
-            />
-          </HStack>
-          <VStack gap={2} hAlign="center">
-            <img
-              className="authBrandIcon"
-              src="/astryx-team.png"
-              alt=""
-              aria-hidden="true"
-            />
-            <Text type="supporting" color="secondary">{appConfig.profile.name}</Text>
-          </VStack>
-          <Card padding={8} width="100%">
-            <VStack gap={4}>
-              <VStack gap={1}>
-                <Heading level={1}>{isRegister ? copy.registerTitle : copy.loginTitle}</Heading>
-                <Text type="supporting" color="secondary">
-                  {isRegister ? copy.registerDescription : copy.loginDescription}
-                </Text>
-              </VStack>
-              {message ? (
-                <Banner status="error" title={message} container="card" />
-              ) : null}
-              {isRegister ? (
-                <TextInput
-                  label={copy.name}
-                  value={name}
-                  startIcon={UserIcon}
-                  isRequired
-                  hasAutoFocus
-                  onChange={setName}
-                />
-              ) : null}
-              <TextInput
-                label={copy.email}
-                value={email}
-                type="email"
-                startIcon={EnvelopeIcon}
-                isRequired
-                hasAutoFocus={!isRegister}
-                onChange={setEmail}
-              />
-              <TextInput
-                label={copy.password}
-                value={password}
-                type="password"
-                startIcon={LockClosedIcon}
-                isRequired
-                onChange={setPassword}
-              />
-              <Button
-                label={isRegister ? copy.registerAction : copy.loginAction}
-                variant="primary"
-                icon={<Icon icon={ArrowRightEndOnRectangleIcon} size="sm" />}
-                isLoading={isSubmitting}
-                onClick={submit}
-              />
-              <HStack gap={1} hAlign="center" wrap="wrap">
-                <Text type="supporting" color="secondary">
-                  {isRegister ? copy.hasAccount : copy.newHere}
-                </Text>
-                <Link
-                  href={isRegister ? '#login' : '#register'}
-                  isStandalone
-                  onClick={event => {
-                    event.preventDefault();
-                    switchMode(isRegister ? 'login' : 'register');
-                  }}
-                >
-                  {isRegister ? copy.loginAction : copy.registerTitle}
-                </Link>
-              </HStack>
-            </VStack>
-          </Card>
-        </VStack>
-      </Center>
-    </AppShell>
-  );
-}
-
-function NotificationCenter({
-  notifications,
-  locale,
-  onMarkRead,
-  onMarkAllRead,
-  onClose,
-}: {
-  notifications: AppNotification[];
-  locale: Locale;
-  onMarkRead: (id: string) => void;
-  onMarkAllRead: () => void;
-  onClose: () => void;
-}) {
-  const copy = uiCopy[locale].notifications;
-  const unreadCount = notifications.filter(item => !item.isRead).length;
-
-  return (
-    <Dialog
-      isOpen
-      onOpenChange={open => !open && onClose()}
-      width="min(38.75rem, calc(100vw - var(--spacing-12)))"
-      maxHeight="min(82dvh, 46rem)"
-      padding={0}
-      purpose="info"
-    >
-      <VStack gap={0} className="dialogFrame">
-        <StackItem className="dialogHeader">
-          <HStack hAlign="between" vAlign="center" gap={3}>
-            <VStack gap={0}>
-              <Heading level={2}>{copy.title}</Heading>
-            </VStack>
-            <Button
-              label={copy.markAllRead}
-              size="sm"
-              variant="secondary"
-              isDisabled={unreadCount === 0}
-              onClick={onMarkAllRead}
-            />
-          </HStack>
-        </StackItem>
-        <StackItem className="dialogContent">
-          {notifications.length > 0 ? (
-            <List hasDividers density="balanced">
-              {notifications.map(item => (
-                <ListItem
-                  key={item.id}
-                  label={item.title}
-                  description={`${item.description} · ${item.time}`}
-                  onClick={() => onMarkRead(item.id)}
-                  endContent={
-                    <Token
-                      label={item.isRead ? copy.read : copy.unread}
-                      color={item.isRead ? 'gray' : notificationColors[item.status]}
-                      size="sm"
-                    />
-                  }
-                />
-              ))}
-            </List>
-          ) : (
-            <Text type="body" color="secondary">{copy.empty}</Text>
-          )}
-        </StackItem>
-        <HStack hAlign="end" gap={2} className="dialogFooter">
-          <Button label={copy.close} onClick={onClose} />
-        </HStack>
-      </VStack>
-    </Dialog>
-  );
 }
 
 export function App() {
@@ -354,8 +128,8 @@ export function App() {
     [modules, activeModule?.id],
   );
   const activeGroup = activeModule?.group === copy.navigationGroup ? null : activeModule?.group;
-  const groupLanding = activeGroup
-    ? firstLeafModule(modules.find(item => item.group === activeGroup) ?? activeModule!)
+  const groupLanding = activeModule && activeGroup
+    ? firstLeafModule(modules.find(item => item.group === activeGroup) ?? activeModule)
     : undefined;
   const activeSchema = activeModule?.resource
     ? schemas.find(schema => schema.id === activeModule.resource)
@@ -444,17 +218,19 @@ export function App() {
   if (!isAuthenticated) {
     return (
       <Theme theme={neutralTheme} mode={themeMode}>
-        <AuthPage
-          appConfig={appConfig}
-          authUsers={authUsers}
-          locale={locale}
-          onLocaleToggle={toggleLocale}
-          onComplete={session => {
-            setCurrentSession(session);
-            setIsAuthenticated(true);
-            setIsSessionChecked(true);
-          }}
-        />
+        <Suspense fallback={<PageFallback />}>
+          <AuthPage
+            appConfig={appConfig}
+            authUsers={authUsers}
+            locale={locale}
+            onLocaleToggle={toggleLocale}
+            onComplete={session => {
+              setCurrentSession(session);
+              setIsAuthenticated(true);
+              setIsSessionChecked(true);
+            }}
+          />
+        </Suspense>
       </Theme>
     );
   }
@@ -630,17 +406,26 @@ export function App() {
           </HStack>
           <Divider />
           <StackItem size="fill" className="pageContent">
-            {activeModule.kind === 'dashboard' ? (
-              <DashboardPage locale={locale} />
-            ) : activeModule.id === 'userCenter' ? (
-              <UserCenterPage locale={locale} />
-            ) : activeSchema ? (
-              <ResourcePage schema={activeSchema} locale={locale} />
-            ) : (
-              <Card>
-                <Text type="body">{copy.noPage}</Text>
-              </Card>
-            )}
+            <Suspense fallback={<PageFallback />}>
+              {activeModule.kind === 'dashboard' ? (
+                <DashboardPage locale={locale} />
+              ) : activeModule.id === 'userCenter' ? (
+                <UserCenterPage
+                  locale={locale}
+                  onProfileUpdated={profile => {
+                    setCurrentSession(current => current
+                      ? {...current, user: {name: profile.name, email: profile.email}}
+                      : current);
+                  }}
+                />
+              ) : activeSchema ? (
+                <ResourcePage schema={activeSchema} locale={locale} />
+              ) : (
+                <Card>
+                  <Text type="body">{copy.noPage}</Text>
+                </Card>
+              )}
+            </Suspense>
           </StackItem>
         </VStack>
         {isNotificationCenterOpen ? (
