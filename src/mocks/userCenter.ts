@@ -4,7 +4,7 @@ export type UserDetailSectionKey = 'personalDetails' | 'contactDetails' | 'organ
 
 export type UserDetailField = {
   label: string;
-  source: keyof UserProfile | 'enterpriseWechat' | 'emergencyContact';
+  source: keyof UserProfile;
 };
 
 export const userCenterDetailSchema: Record<UserDetailSectionKey, UserDetailField[]> = {
@@ -32,6 +32,7 @@ export const userCenterDetailSchema: Record<UserDetailSectionKey, UserDetailFiel
 
 export const userCenterData: UserCenterData = {
   profile: {
+    avatarUrl: '/astryx-team.png',
     name: 'System Administrator',
     title: 'Head of Platform Operations',
     department: 'Platform Operations',
@@ -41,6 +42,8 @@ export const userCenterData: UserCenterData = {
     manager: 'Head of Platform',
     email: 'admin@example.com',
     phone: '155 7872 0001',
+    enterpriseWechat: 'admin.ops',
+    emergencyContact: 'Platform on-call team',
     location: 'Shanghai · Headquarters',
     joinedAt: '2024-03-18',
     status: 'Available'

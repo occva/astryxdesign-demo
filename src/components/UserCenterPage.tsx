@@ -1,4 +1,4 @@
-import {useEffect, useState} from 'react';
+import {useEffect, useId, useState, type ChangeEvent} from 'react';
 import {Banner} from '@cloudflare/kumo/components/banner';
 import {Button} from '@cloudflare/kumo/components/button';
 import {Dialog} from '@cloudflare/kumo/components/dialog';
@@ -19,7 +19,6 @@ import {
   Card,
   FormInput,
   FormSelect,
-  PageTitle,
   SectionTitle,
   StatusBadge,
   colorToBadgeVariant,
@@ -62,6 +61,20 @@ function ProfileDialog({
   onSave: () => void;
 }) {
   const copy = uiCopy[locale].userCenter;
+  const avatarInputId = useId();
+  const updateAvatar = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+    if (!file || !profileDraft) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        onDraftChange({...profileDraft, avatarUrl: reader.result});
+      }
+    };
+    reader.readAsDataURL(file);
+    event.currentTarget.value = '';
+  };
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
@@ -71,6 +84,25 @@ function ProfileDialog({
             <>
               {message ? <Banner variant="error" title={message} /> : null}
               <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex items-center gap-4 rounded-lg border border-kumo-line p-4 sm:col-span-2">
+                  <Avatar name={profileDraft.name} src={profileDraft.avatarUrl} size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <Text as="span" size="sm" bold>{copy.avatar}</Text>
+                    <input
+                      id={avatarInputId}
+                      className="sr-only"
+                      type="file"
+                      accept="image/*"
+                      onChange={updateAvatar}
+                    />
+                    <label
+                      className="mt-2 inline-flex cursor-pointer items-center rounded-lg border border-kumo-line bg-kumo-elevated px-3 py-1.5 text-sm font-medium text-kumo-strong hover:bg-kumo-tint"
+                      htmlFor={avatarInputId}
+                    >
+                      {copy.chooseAvatar}
+                    </label>
+                  </div>
+                </div>
                 <FormInput
                   label={copy.name}
                   value={profileDraft.name}
@@ -102,6 +134,16 @@ function ProfileDialog({
                   label={copy.phone}
                   value={profileDraft.phone}
                   onValueChange={phone => onDraftChange({...profileDraft, phone})}
+                />
+                <FormInput
+                  label={copy.enterpriseWechat}
+                  value={profileDraft.enterpriseWechat}
+                  onValueChange={enterpriseWechat => onDraftChange({...profileDraft, enterpriseWechat})}
+                />
+                <FormInput
+                  label={copy.emergencyContact}
+                  value={profileDraft.emergencyContact}
+                  onValueChange={emergencyContact => onDraftChange({...profileDraft, emergencyContact})}
                 />
                 <FormInput
                   label={copy.location}
@@ -187,7 +229,13 @@ function SecurityDialog({
   );
 }
 
-export function UserCenterPage({locale}: {locale: Locale}) {
+export function UserCenterPanel({
+  locale,
+  onProfileSaved,
+}: {
+  locale: Locale;
+  onProfileSaved?: (profile: UserProfile) => void;
+}) {
   const copy = uiCopy[locale].userCenter;
   const [data, setData] = useState<UserCenterData | null>(null);
   const [profileDraft, setProfileDraft] = useState<UserProfile | null>(null);
@@ -241,6 +289,7 @@ export function UserCenterPage({locale}: {locale: Locale}) {
       const profile = await mockApi.updateUserProfile(profileDraft);
       const details = await mockApi.getUserProfileDetails();
       setData(current => current ? {...current, profile, ...details} : current);
+      onProfileSaved?.(profile);
       setProfileMessage(null);
       setIsProfileDialogOpen(false);
     } catch (error) {
@@ -280,7 +329,7 @@ export function UserCenterPage({locale}: {locale: Locale}) {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-5">
           <div className="flex min-w-0 items-center gap-4">
-            <Avatar name={data.profile.name} size="lg" />
+            <Avatar name={data.profile.name} src={data.profile.avatarUrl} size="lg" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <Text variant="heading1" as="h1">{data.profile.name}</Text>
@@ -378,4 +427,14 @@ export function UserCenterPage({locale}: {locale: Locale}) {
       />
     </div>
   );
+}
+
+export function UserCenterPage({
+  locale,
+  onProfileSaved,
+}: {
+  locale: Locale;
+  onProfileSaved?: (profile: UserProfile) => void;
+}) {
+  return <UserCenterPanel locale={locale} onProfileSaved={onProfileSaved} />;
 }

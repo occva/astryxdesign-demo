@@ -26,6 +26,7 @@ import type {
   AuthUser,
   ResourceSchema,
   SelectOption,
+  UserProfile,
 } from "./types";
 import { DashboardPage } from "./components/DashboardPage";
 import { ResourcePage } from "./components/ResourcePage";
@@ -334,6 +335,7 @@ export function App() {
   const [currentSession, setCurrentSession] = useState<AuthSession | null>(
     null,
   );
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activePage, setActivePage] = useState("charts");
   const [openedPages, setOpenedPages] = useState<string[]>(["charts"]);
   const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
@@ -366,6 +368,11 @@ export function App() {
       setCurrentSession(session);
       setIsAuthenticated(Boolean(session));
       setIsSessionChecked(true);
+      if (session) {
+        mockApi.getUserProfile().then(setUserProfile);
+      } else {
+        setUserProfile(null);
+      }
     });
     mockApi.getNotifications().then(setNotifications);
     mockApi.getSchemas().then(setSchemas);
@@ -378,9 +385,13 @@ export function App() {
   };
 
   const modules = appConfig?.modules ?? [];
+  const sidebarModules = useMemo(
+    () => modules.filter((item) => item.id !== "userCenter"),
+    [modules],
+  );
   const appProfile = appConfig?.profile;
   const accountMenuActions = appConfig?.accountMenuActions ?? [];
-  const groups = useMemo(() => groupedModules(modules), [modules]);
+  const groups = useMemo(() => groupedModules(sidebarModules), [sidebarModules]);
   const allModules = useMemo(() => flattenModules(modules), [modules]);
   const activeModule =
     allModules.find(
@@ -437,6 +448,7 @@ export function App() {
           onClick: async () => {
             await mockApi.logout();
             setCurrentSession(null);
+            setUserProfile(null);
             setIsAuthenticated(false);
             setIsSessionChecked(true);
             setActivePage("charts");
@@ -465,6 +477,22 @@ export function App() {
   const markAllNotificationsRead = async () => {
     const next = await mockApi.markAllNotificationsRead();
     setNotifications(next);
+  };
+
+  const syncSavedProfile = (profile: UserProfile) => {
+    setUserProfile(profile);
+    setCurrentSession((current) =>
+      current
+        ? {
+            ...current,
+            user: {
+              ...current.user,
+              name: profile.name,
+              email: profile.email,
+            },
+          }
+        : current,
+    );
   };
 
   if (!appConfig || !authUsers || !isSessionChecked) {
@@ -497,6 +525,7 @@ export function App() {
             setCurrentSession(session);
             setIsAuthenticated(true);
             setIsSessionChecked(true);
+            mockApi.getUserProfile().then(setUserProfile);
           }}
         />
       </div>
@@ -516,6 +545,10 @@ export function App() {
       </div>
     );
   }
+
+  const sidebarUserName =
+    userProfile?.name ?? currentSession?.user.name ?? appProfile.operator;
+  const sidebarUserDepartment = userProfile?.department ?? appProfile.department;
 
   const renderSideNavItem = (item: AppModule) => {
     if (item.children?.length) {
@@ -537,7 +570,7 @@ export function App() {
                   <DropdownMenu.Item
                     key={child.id}
                     className={activePage === child.id ? "bg-kumo-tint text-kumo-strong" : undefined}
-                    icon={sidebarIcon(child.icon)}
+                    icon={<ModuleIcon name={child.icon} className="size-4" />}
                     selected={activePage === child.id}
                     onClick={() => navigate(child.id)}
                   >
@@ -605,7 +638,9 @@ export function App() {
 
   const renderPage = () => {
     if (activeModule.kind === "dashboard") return <DashboardPage locale={locale} />;
-    if (activeModule.id === "userCenter") return <UserCenterPage locale={locale} />;
+    if (activeModule.id === "userCenter") {
+      return <UserCenterPage locale={locale} onProfileSaved={syncSavedProfile} />;
+    }
     if (activeSchema) return <ResourcePage schema={activeSchema} locale={locale} />;
     return (
       <Card>
@@ -648,19 +683,28 @@ export function App() {
             ))}
           </Sidebar.Content>
           <Sidebar.Footer className="h-auto py-2">
-            <div className="flex w-full min-w-0 items-center gap-3 p-2 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
-              <Avatar
-                name={currentSession?.user.name ?? appProfile.operator}
-                className="size-8 shrink-0"
-              />
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[state=collapsed]/sidebar:hidden">
-                <Text as="span" size="sm" bold truncate>
-                  {currentSession?.user.name ?? appProfile.operator}
-                </Text>
-                <Text as="span" variant="secondary" size="xs" truncate>
-                  {appProfile.department}
-                </Text>
-              </span>
+            <div className="flex w-full min-w-0 items-center gap-1  group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
+              <button
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:flex-none group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0"
+                type="button"
+                aria-label={copy.openUserCenter}
+                title={copy.openUserCenter}
+                onClick={() => navigate("userCenter")}
+              >
+                <Avatar
+                  name={sidebarUserName}
+                  src={userProfile?.avatarUrl}
+                  className="size-8 shrink-0"
+                />
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[state=collapsed]/sidebar:hidden">
+                  <Text as="span" size="sm" bold truncate>
+                    {sidebarUserName}
+                  </Text>
+                  <Text as="span" variant="secondary" size="xs" truncate>
+                    {sidebarUserDepartment}
+                  </Text>
+                </span>
+              </button>
               <DropdownMenu>
                 <DropdownMenu.Trigger
                   render={

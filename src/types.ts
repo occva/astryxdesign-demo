@@ -152,6 +152,7 @@ export type UserCenterData = {
 };
 
 export type UserProfile = {
+  avatarUrl: string;
   name: string;
   title: string;
   department: string;
@@ -161,6 +162,8 @@ export type UserProfile = {
   manager: string;
   email: string;
   phone: string;
+  enterpriseWechat: string;
+  emergencyContact: string;
   location: string;
   joinedAt: string;
   status: string;

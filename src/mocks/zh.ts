@@ -118,9 +118,11 @@ export const zhUserCenterDetailSchema: Record<UserDetailSectionKey, UserDetailFi
 
 export const zhUserCenterData: UserCenterData = {
   profile: {
+    avatarUrl: '/astryx-team.png',
     name: '系统管理员', title: '平台运营负责人', department: '平台管理部', account: 'admin',
     employeeId: 'EMP-2026-001', role: '超级管理员', manager: '平台负责人', email: 'admin@example.com',
-    phone: '155 7872 0001', location: '上海 · 总部', joinedAt: '2024-03-18', status: '在线值守',
+    phone: '155 7872 0001', enterpriseWechat: 'admin.ops', emergencyContact: '平台值班组',
+    location: '上海 · 总部', joinedAt: '2024-03-18', status: '在线值守',
   },
   statusOptions: [
     {label: '在线值守', value: '在线值守', color: 'green'},

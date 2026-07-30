@@ -133,22 +133,10 @@ function createSession(user: AuthUser): AuthSession {
   };
 }
 
-function staticDetailValue(label: string, previous: UserCenterData) {
-  const item = [
-    ...previous.personalDetails,
-    ...previous.contactDetails,
-    ...previous.organizationDetails,
-  ].find(detail => detail.label === label);
-  return item?.value ?? '';
-}
-
 function detailsFromProfile(profile: UserProfile, previous: UserCenterData) {
   const detailSchema = localizedUserCenterDetailSchema();
   const build = (section: keyof typeof detailSchema): UserProfileDetail[] => (
     detailSchema[section].map(field => {
-      if (field.source === 'enterpriseWechat' || field.source === 'emergencyContact') {
-        return {label: field.label, value: staticDetailValue(field.label, previous)};
-      }
       return {label: field.label, value: String(profile[field.source] ?? '')};
     })
   );
@@ -177,6 +165,25 @@ function applyProfile(profile: UserProfile) {
     profile,
     ...detailsFromProfile(profile, userCenterStore),
   };
+}
+
+function syncProfileAuth(profile: UserProfile) {
+  const session = readSession();
+  const currentEmail = session?.user.email ?? profile.email;
+  const authUser = authStore.find(item => item.email === currentEmail || item.email === profile.email);
+  if (authUser) {
+    authUser.name = profile.name;
+    authUser.email = profile.email;
+    writeAuthUsers();
+  }
+  if (!session) return;
+  writeSession({
+    ...session,
+    user: {
+      name: profile.name,
+      email: profile.email,
+    },
+  });
 }
 
 function hydrateUserCenterFromSession(session: AuthSession | null) {
@@ -312,6 +319,7 @@ export const mockApi = {
 
   async updateUserProfile(profile: UserProfile): Promise<UserProfile> {
     applyProfile(profile);
+    syncProfileAuth(profile);
     return delay(structuredClone(userCenterStore.profile));
   },
 

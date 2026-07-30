@@ -204,19 +204,31 @@ export function NativeSelect({
 
 export function Avatar({
   name,
+  src,
   size = 'base',
   className,
 }: {
   name: string;
+  src?: string;
   size?: 'base' | 'lg';
   className?: string;
 }) {
   const initials = name.trim().slice(0, 2).toUpperCase() || 'U';
+  const sizeClass = size === 'lg' ? 'size-14 text-lg' : 'size-9';
+  if (src) {
+    return (
+      <img
+        className={cn('shrink-0 rounded-full object-cover', sizeClass, className)}
+        src={src}
+        alt={name}
+      />
+    );
+  }
   return (
     <div
       className={cn(
         'flex shrink-0 items-center justify-center rounded-full bg-kumo-brand text-sm font-semibold text-white',
-        size === 'lg' ? 'size-14 text-lg' : 'size-9',
+        sizeClass,
         className,
       )}
       aria-hidden="true"
