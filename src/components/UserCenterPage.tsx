@@ -38,7 +38,13 @@ function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
   );
 }
 
-export function UserCenterPage({locale}: {locale: Locale}) {
+export function UserCenterPage({
+  locale,
+  onProfileUpdated,
+}: {
+  locale: Locale;
+  onProfileUpdated?: (profile: UserProfile) => void;
+}) {
   const copy = uiCopy[locale].userCenter;
   const [data, setData] = useState<UserCenterData | null>(null);
   const [profileDraft, setProfileDraft] = useState<UserProfile | null>(null);
@@ -94,6 +100,7 @@ export function UserCenterPage({locale}: {locale: Locale}) {
       setData(current => current ? {...current, profile, ...details} : current);
       setProfileMessage(null);
       setIsProfileDialogOpen(false);
+      onProfileUpdated?.(profile);
     } catch (error) {
       setProfileMessage(error instanceof Error ? error.message : copy.profileSaveFailed);
     } finally {

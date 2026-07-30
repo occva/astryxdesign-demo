@@ -232,7 +232,9 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
     const link = document.createElement('a');
     link.href = url;
     link.download = `${schema.title}.csv`;
+    document.body.appendChild(link);
     link.click();
+    link.remove();
     URL.revokeObjectURL(url);
   };
 
