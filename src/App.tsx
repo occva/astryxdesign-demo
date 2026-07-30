@@ -32,7 +32,7 @@ import { DashboardPage } from "./components/DashboardPage";
 import { ResourcePage } from "./components/ResourcePage";
 import { UserCenterPage } from "./components/UserCenterPage";
 import { ModuleIcon } from "./components/icons";
-import { Avatar, Card, FormInput, StatusBadge } from "./components/kumo-ui";
+import { Avatar, Card, FormInput } from "./components/kumo-ui";
 import {
   LOCALE_STORAGE_KEY,
   localeMeta,
@@ -44,6 +44,10 @@ type AuthMode = "login" | "register";
 type ThemeMode = "light" | "dark";
 
 const SIDEBAR_STORAGE_KEY = "kumo-demo-sidebar-open";
+const COLLAPSED_SIDEBAR_BUTTON_CLASS =
+  "group-data-[state=collapsed]/sidebar:mx-auto group-data-[state=collapsed]/sidebar:size-10 group-data-[state=collapsed]/sidebar:min-h-10 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:px-0 group-data-[state=collapsed]/sidebar:py-0 group-data-[state=collapsed]/sidebar:[&>div]:w-full group-data-[state=collapsed]/sidebar:[&>div]:translate-x-0 group-data-[state=collapsed]/sidebar:[&>div]:justify-center group-data-[state=collapsed]/sidebar:[&>div>span]:hidden";
+const SIDEBAR_ACTIVE_CLASS =
+  "data-[active]:bg-kumo-fill data-[active]:text-kumo-strong data-[active]:[&_svg]:opacity-75";
 
 const notificationColors: Record<
   AppNotification["status"],
@@ -89,7 +93,7 @@ function findParentModule(
 function BrandMark({ className = "" }: { className?: string }) {
   return (
     <img
-      className={`size-10 shrink-0 rounded-xl ${className}`}
+      className={`size-8 shrink-0 rounded-xl ${className}`}
       src="/original-logo.png"
       alt=""
       aria-hidden="true"
@@ -101,6 +105,17 @@ function sidebarIcon(name: AppModule["icon"]) {
   return function SidebarModuleIcon({ className }: { className?: string }) {
     return <ModuleIcon name={name} className={className} />;
   };
+}
+
+function dropdownModuleIcon(name: AppModule["icon"], active = false) {
+  return (
+    <span
+      className={`mr-2 inline-flex size-5 shrink-0 items-center justify-center ${active ? "text-kumo-strong" : "text-kumo-subtle"}`}
+      aria-hidden="true"
+    >
+      <ModuleIcon name={name} className="size-4" />
+    </span>
+  );
 }
 
 function AuthPage({
@@ -552,31 +567,38 @@ export function App() {
 
   const renderSideNavItem = (item: AppModule) => {
     if (item.children?.length) {
+      const hasActiveChild = item.children.some((child) => child.id === activePage);
       if (!isSidebarOpen) {
         return (
-          <Sidebar.MenuItem key={item.id}>
+          <Sidebar.MenuItem
+            key={item.id}
+            className="group-data-[state=collapsed]/sidebar:overflow-visible"
+          >
             <DropdownMenu>
               <DropdownMenu.Trigger
                 render={
                   <Sidebar.MenuButton
-                    className="group-data-[state=collapsed]/sidebar:px-2"
+                    className={`${COLLAPSED_SIDEBAR_BUTTON_CLASS} ${SIDEBAR_ACTIVE_CLASS}`}
+                    active={hasActiveChild}
                     icon={sidebarIcon(item.icon)}
                     aria-label={item.title}
                   />
                 }
               />
               <DropdownMenu.Content side="right" align="start" className="min-w-44 p-2">
-                {item.children.map((child) => (
-                  <DropdownMenu.Item
-                    key={child.id}
-                    className={activePage === child.id ? "bg-kumo-tint text-kumo-strong" : undefined}
-                    icon={<ModuleIcon name={child.icon} className="size-4" />}
-                    selected={activePage === child.id}
-                    onClick={() => navigate(child.id)}
-                  >
-                    {child.title}
-                  </DropdownMenu.Item>
-                ))}
+                {item.children.map((child) => {
+                  const isChildActive = activePage === child.id;
+                  return (
+                    <DropdownMenu.Item
+                      key={child.id}
+                      className={`min-h-10 px-3 py-2 text-sm font-medium ${isChildActive ? "bg-kumo-fill text-kumo-strong" : "text-kumo-default"}`}
+                      icon={dropdownModuleIcon(child.icon, isChildActive)}
+                      onClick={() => navigate(child.id)}
+                    >
+                      {child.title}
+                    </DropdownMenu.Item>
+                  );
+                })}
               </DropdownMenu.Content>
             </DropdownMenu>
           </Sidebar.MenuItem>
@@ -585,7 +607,10 @@ export function App() {
 
       const isGroupOpen = openSidebarGroups[item.id] ?? true;
       return (
-        <Sidebar.MenuItem key={item.id}>
+        <Sidebar.MenuItem
+          key={item.id}
+          className="group-data-[state=collapsed]/sidebar:overflow-visible"
+        >
           <Sidebar.Collapsible
             open={isGroupOpen}
             onOpenChange={(open) => {
@@ -595,7 +620,8 @@ export function App() {
             <Sidebar.CollapsibleTrigger
               render={
                 <Sidebar.MenuButton
-                  className="group-data-[state=collapsed]/sidebar:px-2"
+                  className={`${COLLAPSED_SIDEBAR_BUTTON_CLASS} ${SIDEBAR_ACTIVE_CLASS}`}
+                  active={hasActiveChild}
                   icon={sidebarIcon(item.icon)}
                   tooltip={item.title}
                 >
@@ -623,16 +649,20 @@ export function App() {
     }
 
     return (
-      <Sidebar.MenuButton
+      <Sidebar.MenuItem
         key={item.id}
-        className="group-data-[state=collapsed]/sidebar:px-2"
-        active={activePage === item.id}
-        icon={sidebarIcon(item.icon)}
-        tooltip={item.title}
-        onClick={() => navigate(item.id)}
+        className="group-data-[state=collapsed]/sidebar:overflow-visible"
       >
-        {item.title}
-      </Sidebar.MenuButton>
+        <Sidebar.MenuButton
+          className={`${COLLAPSED_SIDEBAR_BUTTON_CLASS} ${SIDEBAR_ACTIVE_CLASS}`}
+          active={activePage === item.id}
+          icon={sidebarIcon(item.icon)}
+          tooltip={item.title}
+          onClick={() => navigate(item.id)}
+        >
+          {isSidebarOpen ? item.title : null}
+        </Sidebar.MenuButton>
+      </Sidebar.MenuItem>
     );
   };
 
@@ -664,7 +694,7 @@ export function App() {
         <Sidebar className="h-dvh shrink-0" contentClassName="bg-kumo-elevated">
           <Sidebar.Header>
             <button
-              className="flex w-full min-w-0 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0"
+              className={`flex w-full min-w-0 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
               type="button"
               onClick={() => navigate("charts")}
             >
@@ -683,9 +713,9 @@ export function App() {
             ))}
           </Sidebar.Content>
           <Sidebar.Footer className="h-auto py-2">
-            <div className="flex w-full min-w-0 items-center gap-1  group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
+            <div className="flex w-full min-w-0 items-center gap-1 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
               <button
-                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:flex-none group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0"
+                className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:flex-none ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
                 type="button"
                 aria-label={copy.openUserCenter}
                 title={copy.openUserCenter}
@@ -768,9 +798,6 @@ export function App() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <StatusBadge tone={themeMode === "dark" ? "info" : "neutral"}>
-                {themeMode === "dark" ? copy.dark : copy.light}
-              </StatusBadge>
               <Button
                 shape="square"
                 variant="secondary"
