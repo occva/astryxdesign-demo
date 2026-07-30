@@ -692,7 +692,7 @@ export function App() {
         className="h-full overflow-hidden"
       >
         <Sidebar className="h-dvh shrink-0" contentClassName="bg-kumo-elevated">
-          <Sidebar.Header>
+          <Sidebar.Header className="border-kumo-line/45">
             <button
               className={`flex w-full min-w-0 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
               type="button"
@@ -712,10 +712,10 @@ export function App() {
               </Sidebar.Group>
             ))}
           </Sidebar.Content>
-          <Sidebar.Footer className="h-auto py-2">
-            <div className="flex w-full min-w-0 items-center gap-1 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
+          <Sidebar.Footer className="h-auto border-t-0 !bg-transparent !px-3 py-2 group-data-[state=collapsed]/sidebar:border-r-0">
+            <div className="group/user-entry -mx-1.5 flex w-[calc(100%+0.75rem)] min-w-0 items-center gap-1.5 rounded-xl px-2 py-2 transition-colors hover:bg-kumo-fill group-data-[state=collapsed]/sidebar:mx-auto group-data-[state=collapsed]/sidebar:size-10 group-data-[state=collapsed]/sidebar:w-10 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
               <button
-                className={`flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:flex-none ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
+                className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-1 text-left transition-colors group-data-[state=collapsed]/sidebar:flex-none ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
                 type="button"
                 aria-label={copy.openUserCenter}
                 title={copy.openUserCenter}
@@ -724,22 +724,22 @@ export function App() {
                 <Avatar
                   name={sidebarUserName}
                   src={userProfile?.avatarUrl}
-                  className="size-8 shrink-0"
+                  className="size-6 shrink-0"
                 />
-                <span className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[state=collapsed]/sidebar:hidden">
-                  <Text as="span" size="sm" bold truncate>
+                <span className="flex min-w-0 flex-1 flex-col gap-px group-data-[state=collapsed]/sidebar:hidden">
+                  <span className="truncate text-sm font-medium leading-4 text-kumo-strong">
                     {sidebarUserName}
-                  </Text>
-                  <Text as="span" variant="secondary" size="xs" truncate>
+                  </span>
+                  <span className="truncate text-[12px] leading-4 text-kumo-subtle">
                     {sidebarUserDepartment}
-                  </Text>
+                  </span>
                 </span>
               </button>
               <DropdownMenu>
                 <DropdownMenu.Trigger
                   render={
                     <button
-                      className="shrink-0 rounded-md p-1.5 text-kumo-subtle hover:bg-kumo-tint group-data-[state=collapsed]/sidebar:hidden"
+                      className="grid size-9 shrink-0 place-items-center rounded-lg text-kumo-default/70 transition-colors hover:!bg-kumo-contrast/10 hover:text-kumo-strong focus:!bg-kumo-contrast/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-contrast/20 data-[state=open]:!bg-kumo-contrast/10 group-hover/user-entry:text-kumo-default/85 group-data-[state=collapsed]/sidebar:hidden"
                       type="button"
                       aria-label={copy.accountMenu}
                     >
