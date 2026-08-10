@@ -5,16 +5,21 @@ import { Button } from "@cloudflare/kumo/components/button";
 import { Dialog } from "@cloudflare/kumo/components/dialog";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { Link } from "@cloudflare/kumo/components/link";
+import { Popover } from "@cloudflare/kumo/components/popover";
 import { Sidebar } from "@cloudflare/kumo/components/sidebar";
 import { Text } from "@cloudflare/kumo/components/text";
+import { Tooltip } from "@cloudflare/kumo/components/tooltip";
 import {
   Bell,
+  CaretDoubleLeft,
+  CaretDoubleRight,
   GearSix,
   Moon,
   SignIn,
   SignOut,
   Sun,
   Translate,
+  UserCircle,
   X,
 } from "@phosphor-icons/react";
 import { mockApi } from "./services/mockApi";
@@ -48,6 +53,9 @@ const COLLAPSED_SIDEBAR_BUTTON_CLASS =
   "group-data-[state=collapsed]/sidebar:mx-auto group-data-[state=collapsed]/sidebar:size-10 group-data-[state=collapsed]/sidebar:min-h-10 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:px-0 group-data-[state=collapsed]/sidebar:py-0 group-data-[state=collapsed]/sidebar:[&>div]:w-full group-data-[state=collapsed]/sidebar:[&>div]:translate-x-0 group-data-[state=collapsed]/sidebar:[&>div]:justify-center group-data-[state=collapsed]/sidebar:[&>div>span]:hidden";
 const SIDEBAR_ACTIVE_CLASS =
   "data-[active]:bg-kumo-fill data-[active]:text-kumo-strong data-[active]:[&_svg]:opacity-75";
+const SIDEBAR_SUB_BUTTON_CLASS =
+  "hover:!bg-kumo-fill hover:!text-kumo-strong data-[active]:!bg-kumo-fill data-[active]:!text-kumo-strong data-[active]:shadow-sm";
+const SIDEBAR_SUB_MENU_CLASS = "mt-1.5 pt-0.5";
 
 const notificationColors: Record<
   AppNotification["status"],
@@ -358,6 +366,7 @@ export function App() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isNotificationCenterOpen, setIsNotificationCenterOpen] =
     useState(false);
+  const [isAccountPanelOpen, setIsAccountPanelOpen] = useState(false);
   const [schemas, setSchemas] = useState<ResourceSchema[]>([]);
   const [themeMode, setThemeMode] = useState<ThemeMode>("light");
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -393,6 +402,11 @@ export function App() {
     mockApi.getSchemas().then(setSchemas);
   }, [locale]);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = "kumo";
+    document.documentElement.dataset.mode = themeMode;
+  }, [themeMode]);
+
   const toggleLocale = () => {
     const nextLocale: Locale = locale === "en" ? "zh" : "en";
     mockApi.setLocale(nextLocale);
@@ -422,6 +436,8 @@ export function App() {
   );
   const activeGroup =
     activeModule?.group === copy.navigationGroup ? null : activeModule?.group;
+  const activeParentBreadcrumb =
+    activeParent && activeParent.title !== activeGroup ? activeParent : undefined;
   const groupLanding = activeGroup
     ? firstLeafModule(
         modules.find((item) => item.group === activeGroup) ?? activeModule!,
@@ -451,38 +467,9 @@ export function App() {
     });
   };
 
-  const accountMenuItems = accountMenuActions.flatMap((item) => {
-    if (item.id === "theme" || item.id === "notifications") {
-      return [];
-    }
-    if (item.id === "logout") {
-      return [
-        {
-          label: item.label,
-          icon: SignOut,
-          onClick: async () => {
-            await mockApi.logout();
-            setCurrentSession(null);
-            setUserProfile(null);
-            setIsAuthenticated(false);
-            setIsSessionChecked(true);
-            setActivePage("charts");
-            setOpenedPages(["charts"]);
-          },
-        },
-      ];
-    }
-    if (item.id === "settings") {
-      return [
-        {
-          label: item.label,
-          icon: GearSix,
-          onClick: () => navigate("sysMenu"),
-        },
-      ];
-    }
-    return [];
-  });
+  const settingsAction = accountMenuActions.find((item) => item.id === "settings");
+  const logoutAction = accountMenuActions.find((item) => item.id === "logout");
+  const unreadCount = notifications.filter((item) => !item.isRead).length;
 
   const markNotificationRead = async (id: string) => {
     const next = await mockApi.markNotificationRead(id);
@@ -492,6 +479,17 @@ export function App() {
   const markAllNotificationsRead = async () => {
     const next = await mockApi.markAllNotificationsRead();
     setNotifications(next);
+  };
+
+  const logout = async () => {
+    await mockApi.logout();
+    setIsAccountPanelOpen(false);
+    setCurrentSession(null);
+    setUserProfile(null);
+    setIsAuthenticated(false);
+    setIsSessionChecked(true);
+    setActivePage("charts");
+    setOpenedPages(["charts"]);
   };
 
   const syncSavedProfile = (profile: UserProfile) => {
@@ -631,10 +629,11 @@ export function App() {
               }
             />
             <Sidebar.CollapsibleContent>
-              <Sidebar.MenuSub>
+              <Sidebar.MenuSub className={SIDEBAR_SUB_MENU_CLASS}>
                 {item.children.map((child) => (
                   <Sidebar.MenuSubButton
                     key={child.id}
+                    className={SIDEBAR_SUB_BUTTON_CLASS}
                     active={activePage === child.id}
                     onClick={() => navigate(child.id)}
                   >
@@ -692,17 +691,49 @@ export function App() {
         className="h-full overflow-hidden"
       >
         <Sidebar className="h-dvh shrink-0" contentClassName="bg-kumo-elevated">
-          <Sidebar.Header className="border-kumo-line/45">
-            <button
-              className={`flex w-full min-w-0 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
-              type="button"
-              onClick={() => navigate("charts")}
-            >
-              <BrandMark className="group-data-[state=collapsed]/sidebar:size-8" />
-              <span className="min-w-0 truncate font-semibold group-data-[state=collapsed]/sidebar:hidden">
-                {appProfile.name}
-              </span>
-            </button>
+          <Sidebar.Header className="border-kumo-line/45 px-3">
+            {isSidebarOpen ? (
+              <div className="flex w-full min-w-0 items-center gap-3">
+                <button
+                  className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint"
+                  type="button"
+                  onClick={() => navigate("charts")}
+                >
+                  <BrandMark />
+                  <span className="min-w-0 truncate font-semibold">
+                    {appProfile.name}
+                  </span>
+                </button>
+                <button
+                  className="ml-auto grid size-8 shrink-0 place-items-center rounded-lg text-kumo-subtle transition-colors hover:text-kumo-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-focus/25"
+                  type="button"
+                  aria-label={copy.collapseNavigation}
+                  title={copy.collapseNavigation}
+                  onClick={() => updateSidebarOpen(false)}
+                >
+                  <CaretDoubleLeft className="size-4" />
+                </button>
+              </div>
+            ) : (
+              <Tooltip
+                content={copy.openNavigation}
+                side="right"
+                render={
+                  <button
+                    className="group relative mx-auto grid size-10 place-items-center rounded-lg text-kumo-subtle transition-colors hover:text-kumo-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-focus/25"
+                    type="button"
+                    aria-label={copy.openNavigation}
+                    onClick={() => updateSidebarOpen(true)}
+                  >
+                    <BrandMark className="transition-opacity group-hover:opacity-0 group-focus-visible:opacity-0" />
+                    <CaretDoubleRight
+                      className="absolute size-5 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+                      aria-hidden="true"
+                    />
+                  </button>
+                }
+              />
+            )}
           </Sidebar.Header>
           <Sidebar.Content>
             {Object.entries(groups).map(([group, items]) => (
@@ -712,61 +743,165 @@ export function App() {
               </Sidebar.Group>
             ))}
           </Sidebar.Content>
-          <Sidebar.Footer className="h-auto border-t-0 !bg-transparent !px-3 py-2 group-data-[state=collapsed]/sidebar:border-r-0">
-            <div className="group/user-entry -mx-1.5 flex w-[calc(100%+0.75rem)] min-w-0 items-center gap-1.5 rounded-xl px-2 py-2 transition-colors hover:bg-kumo-fill group-data-[state=collapsed]/sidebar:mx-auto group-data-[state=collapsed]/sidebar:size-10 group-data-[state=collapsed]/sidebar:w-10 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
-              <button
-                className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-1 text-left transition-colors group-data-[state=collapsed]/sidebar:flex-none ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
-                type="button"
-                aria-label={copy.openUserCenter}
-                title={copy.openUserCenter}
-                onClick={() => navigate("userCenter")}
-              >
-                <Avatar
-                  name={sidebarUserName}
-                  src={userProfile?.avatarUrl}
-                  className="size-6 shrink-0"
-                />
-                <span className="flex min-w-0 flex-1 flex-col gap-px group-data-[state=collapsed]/sidebar:hidden">
-                  <span className="truncate text-sm font-medium leading-4 text-kumo-strong">
-                    {sidebarUserName}
-                  </span>
-                  <span className="truncate text-[12px] leading-4 text-kumo-subtle">
-                    {sidebarUserDepartment}
-                  </span>
-                </span>
-              </button>
-              <DropdownMenu>
-                <DropdownMenu.Trigger
+          <Sidebar.Footer className="h-auto border-t border-kumo-line/45 !bg-kumo-elevated !px-3 py-3 group-data-[state=collapsed]/sidebar:border-r-0">
+            <div className="flex w-full min-w-0 items-center gap-3 group-data-[state=collapsed]/sidebar:justify-center">
+              <Popover open={isAccountPanelOpen} onOpenChange={setIsAccountPanelOpen}>
+                <Popover.Trigger
                   render={
                     <button
-                      className="grid size-9 shrink-0 place-items-center rounded-lg text-kumo-default/70 transition-colors hover:!bg-kumo-contrast/10 hover:text-kumo-strong focus:!bg-kumo-contrast/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-contrast/20 data-[state=open]:!bg-kumo-contrast/10 group-hover/user-entry:text-kumo-default/85 group-data-[state=collapsed]/sidebar:hidden"
+                      className="group/user-entry flex min-w-0 flex-1 items-center gap-2 rounded-xl px-2 py-2 text-left transition-colors hover:bg-kumo-fill focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-focus/25 data-[popup-open]:bg-kumo-fill group-data-[state=collapsed]/sidebar:size-10 group-data-[state=collapsed]/sidebar:flex-none group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0"
                       type="button"
                       aria-label={copy.accountMenu}
                     >
-                      <GearSix className="size-4" />
+                      <Avatar
+                        name={sidebarUserName}
+                        src={userProfile?.avatarUrl}
+                        className="size-7 shrink-0"
+                      />
+                      <span className="flex min-w-0 flex-1 flex-col gap-px group-data-[state=collapsed]/sidebar:hidden">
+                        <span className="truncate text-sm font-medium leading-4 text-kumo-strong">
+                          {sidebarUserName}
+                        </span>
+                        <span className="truncate text-[12px] leading-4 text-kumo-subtle">
+                          {sidebarUserDepartment}
+                        </span>
+                      </span>
                     </button>
                   }
                 />
-                <DropdownMenu.Content side="top" align="start">
-                  {accountMenuItems.map((item) => (
-                    <DropdownMenu.Item
-                      key={item.label}
-                      icon={item.icon}
-                      onClick={item.onClick}
+                <Popover.Content
+                  side="top"
+                  align="start"
+                  sideOffset={10}
+                  className="w-72 border border-kumo-line bg-kumo-elevated p-0 text-kumo-default shadow-xl"
+                >
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-3 border-b border-kumo-line px-4 py-3">
+                    <Avatar
+                      name={sidebarUserName}
+                      src={userProfile?.avatarUrl}
+                      className="size-10"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <Popover.Title className="truncate text-sm font-semibold text-kumo-strong">
+                        {sidebarUserName}
+                      </Popover.Title>
+                      <Popover.Description className="truncate text-sm text-kumo-subtle">
+                        {currentSession?.user.email ?? appProfile.email}
+                      </Popover.Description>
+                    </span>
+                  </div>
+                  <div className="border-b border-kumo-line p-2">
+                    <button
+                      className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-kumo-default hover:bg-kumo-tint"
+                      type="button"
+                      onClick={() => {
+                        setIsAccountPanelOpen(false);
+                        navigate("userCenter");
+                      }}
                     >
-                      {item.label}
-                    </DropdownMenu.Item>
-                  ))}
-                </DropdownMenu.Content>
-              </DropdownMenu>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <UserCircle className="size-4 text-kumo-subtle" />
+                        <span className="truncate">{copy.profileSettings}</span>
+                      </span>
+                      <Text as="span" size="sm" variant="secondary">
+                        {sidebarUserDepartment}
+                      </Text>
+                    </button>
+                  </div>
+                  <div className="border-b border-kumo-line p-2">
+                    <div className="flex items-center justify-between gap-3 px-3 py-2">
+                      <span className="flex min-w-0 items-center gap-2 text-sm text-kumo-default">
+                        <Translate className="size-4 text-kumo-subtle" />
+                        <span>{copy.language}</span>
+                      </span>
+                      <div className="flex rounded-lg bg-kumo-fill p-0.5">
+                        {(["zh", "en"] as const).map((item) => (
+                          <button
+                            key={item}
+                            className={`min-w-10 rounded-md px-2 py-1 text-xs font-medium ${locale === item ? "bg-kumo-elevated text-kumo-strong shadow-sm" : "text-kumo-subtle hover:text-kumo-default"}`}
+                            type="button"
+                            onClick={() => {
+                              if (locale !== item) {
+                                mockApi.setLocale(item);
+                                setLocale(item);
+                              }
+                            }}
+                          >
+                            {localeMeta[item].shortLabel}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      className="mt-1 flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm text-kumo-default hover:bg-kumo-tint"
+                      type="button"
+                      onClick={() =>
+                        setThemeMode((current) =>
+                          current === "dark" ? "light" : "dark",
+                        )
+                      }
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        {themeMode === "dark" ? (
+                          <Sun className="size-4 text-kumo-subtle" />
+                        ) : (
+                          <Moon className="size-4 text-kumo-subtle" />
+                        )}
+                        <span className="truncate">{copy.toggleTheme}</span>
+                      </span>
+                      <Text as="span" size="sm" variant="secondary">
+                        {themeMode === "dark" ? copy.dark : copy.light}
+                      </Text>
+                    </button>
+                  </div>
+                  <div className="p-2">
+                    <button
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-kumo-default hover:bg-kumo-tint"
+                      type="button"
+                      onClick={() => {
+                        setIsAccountPanelOpen(false);
+                        navigate("sysMenu");
+                      }}
+                    >
+                      <GearSix className="size-4 text-kumo-subtle" />
+                      <span className="truncate">
+                        {settingsAction?.label ?? copy.settings}
+                      </span>
+                    </button>
+                    <button
+                      className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-kumo-danger hover:bg-kumo-danger/5"
+                      type="button"
+                      onClick={logout}
+                    >
+                      <SignOut className="size-4" />
+                      <span className="truncate">
+                        {logoutAction?.label ?? copy.signOut}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                </Popover.Content>
+              </Popover>
+              <button
+                className="ml-auto relative grid size-9 shrink-0 place-items-center rounded-lg text-kumo-default/70 transition-colors hover:bg-kumo-fill hover:text-kumo-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-focus/25 group-data-[state=collapsed]/sidebar:hidden"
+                type="button"
+                aria-label={copy.notificationsLabel}
+                title={copy.notificationsLabel}
+                onClick={() => setIsNotificationCenterOpen(true)}
+              >
+                <Bell className="size-4" />
+                {unreadCount > 0 ? (
+                  <span className="absolute right-2 top-2 size-2 rounded-full bg-kumo-danger ring-2 ring-kumo-elevated" />
+                ) : null}
+              </button>
             </div>
           </Sidebar.Footer>
         </Sidebar>
 
         <main className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex min-h-18 flex-wrap items-center justify-between gap-3 border-b border-kumo-line bg-kumo-elevated/85 px-6 py-4 backdrop-blur">
+          <header className="flex min-h-14 flex-wrap items-center justify-between gap-3 border-b border-kumo-line/45 bg-kumo-elevated/85 px-6 py-2 backdrop-blur">
             <div className="flex min-w-0 items-center gap-3">
-              <Sidebar.Trigger aria-label={copy.collapseNavigation} />
               <div className="flex min-w-0 items-center gap-2 text-sm text-kumo-subtle">
                 {activeGroup && groupLanding ? (
                   <>
@@ -780,14 +915,14 @@ export function App() {
                     <span>/</span>
                   </>
                 ) : null}
-                {activeParent ? (
+                {activeParentBreadcrumb ? (
                   <>
                     <button
                       className="truncate rounded px-1 hover:text-kumo-default"
                       type="button"
-                      onClick={() => navigate(activeParent.id)}
+                      onClick={() => navigate(activeParentBreadcrumb.id)}
                     >
-                      {activeParent.title}
+                      {activeParentBreadcrumb.title}
                     </button>
                     <span>/</span>
                   </>
@@ -801,14 +936,6 @@ export function App() {
               <Button
                 shape="square"
                 variant="secondary"
-                icon={Translate}
-                aria-label={localeMeta[locale].switchLabel}
-                title={localeMeta[locale].switchLabel}
-                onClick={toggleLocale}
-              />
-              <Button
-                shape="square"
-                variant="secondary"
                 icon={themeMode === "dark" ? Sun : Moon}
                 aria-label={copy.toggleTheme}
                 onClick={() =>
@@ -817,17 +944,10 @@ export function App() {
                   )
                 }
               />
-              <Button
-                shape="square"
-                variant="secondary"
-                icon={Bell}
-                aria-label={copy.notificationsLabel}
-                onClick={() => setIsNotificationCenterOpen(true)}
-              />
             </div>
           </header>
 
-          <nav className="flex min-h-12 gap-1 overflow-x-auto border-b border-kumo-line bg-kumo-base px-4 py-2 shadow-[inset_0_-1px_0_var(--color-kumo-line)]">
+          <nav className="flex min-h-12 gap-1 overflow-x-auto border-b border-kumo-line/45 bg-kumo-base px-4 py-2 shadow-[inset_0_-1px_0_color-mix(in_srgb,var(--color-kumo-line)_45%,transparent)]">
             {openedPages.map((pageId) => {
               const page = allModules.find((item) => item.id === pageId);
               if (!page) return null;
