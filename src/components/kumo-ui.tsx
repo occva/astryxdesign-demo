@@ -247,7 +247,7 @@ export function StatusBadge({
 }) {
   const variantByTone: Record<StatusTone, BadgeVariant> = {
     neutral: 'neutral',
-    info: 'info',
+    info: 'neutral',
     success: 'success',
     warning: 'warning',
     error: 'error',
