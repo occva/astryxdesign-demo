@@ -1,14 +1,20 @@
 import {useEffect, useState} from 'react';
-import {Badge} from '@cloudflare/kumo/components/badge';
-import {Button} from '@cloudflare/kumo/components/button';
-import {LayerCard} from '@cloudflare/kumo/components/layer-card';
-import {Meter} from '@cloudflare/kumo/components/meter';
-import {Tabs} from '@cloudflare/kumo/components/tabs';
-import {Text} from '@cloudflare/kumo/components/text';
-import {ArrowClockwise, ChartBar, ChartLine} from '@phosphor-icons/react';
+import {ArrowClockwise, ChartBar, ChartLine} from './vercel-icons';
 import {mockApi} from '../services/mockApi';
 import type {DashboardData, DashboardMetric, StatusTone} from '../types';
-import {Card, PageTitle, SectionTitle, StatusBadge, colorToBadgeVariant} from './kumo-ui';
+import {
+  Badge,
+  Button,
+  Card,
+  LayerCard,
+  Meter,
+  PageTitle,
+  SectionTitle,
+  StatusBadge,
+  Tabs,
+  Text,
+  colorToBadgeVariant,
+} from './report-ui';
 import {uiCopy, type Locale} from '../localization';
 
 type TrendChartType = 'bar' | 'line';
@@ -16,12 +22,14 @@ type TrendChartType = 'bar' | 'line';
 function MetricCard({metric}: {metric: DashboardMetric}) {
   const variant = metric.tone === 'negative' ? 'error' : metric.tone === 'positive' ? 'success' : 'info';
   return (
-    <Card>
-      <div className="flex flex-col gap-3">
+    <Card className="vbg-custom-metric">
+      <div className="vbg-dashboard-metric__body">
         <Text variant="secondary" size="sm">{metric.label}</Text>
-        <div className="flex items-end justify-between gap-3">
+        <div className="vbg-dashboard-metric__row">
           <Text variant="heading2" as="p">{metric.value}</Text>
-          <Badge variant={variant}>{metric.delta}</Badge>
+          <span className="vbg-dashboard-metric__delta" data-variant={variant}>
+            {metric.delta}
+          </span>
         </div>
       </div>
     </Card>
@@ -69,10 +77,10 @@ function TrendChart({
   const tooltipTransform = tooltipOnRight ? 'translateY(-50%)' : 'translate(-100%, -50%)';
 
   return (
-    <div className="relative h-56 px-1 pt-2">
+    <div className="vbg-dashboard-chart">
       <svg
         aria-label={ariaLabel}
-        className="h-full w-full overflow-visible"
+        className="vbg-dashboard-chart__svg"
         role="img"
         viewBox="0 0 724 224"
       >
@@ -81,8 +89,8 @@ function TrendChart({
             <text
               x={chart.left - 12}
               y={yFor(tick)}
-              className="text-xs"
-              fill="var(--text-color-kumo-subtle)"
+              className="vbg-dashboard-chart__label"
+              fill="var(--vbg-text-secondary)"
               dominantBaseline="middle"
               textAnchor="end"
             >
@@ -93,7 +101,7 @@ function TrendChart({
               x2={chart.right}
               y1={yFor(tick)}
               y2={yFor(tick)}
-              className="stroke-kumo-line"
+              stroke="var(--vbg-border-subtle)"
               opacity={tick === 0 ? 1 : 0.65}
               strokeDasharray={tick === 0 ? undefined : '4 8'}
             />
@@ -111,8 +119,8 @@ function TrendChart({
                   y={targetY}
                   width={barWidth}
                   height={chart.bottom - targetY}
-                  fill="color-mix(in srgb, var(--color-kumo-contrast) 18%, transparent)"
-                  stroke="var(--color-kumo-line)"
+                  fill="color-mix(in srgb, var(--vbg-surface-contrast) 12%, transparent)"
+                  stroke="var(--vbg-border-subtle)"
                   rx="4"
                 />
                 <rect
@@ -120,7 +128,7 @@ function TrendChart({
                   y={valueY}
                   width={barWidth}
                   height={chart.bottom - valueY}
-                  fill="var(--color-kumo-brand)"
+                  fill="var(--vbg-chart-1)"
                   rx="4"
                 />
               </g>
@@ -131,7 +139,7 @@ function TrendChart({
             <path
               d={pathFor('target')}
               fill="none"
-              stroke="color-mix(in srgb, var(--color-kumo-contrast) 36%, transparent)"
+              stroke="color-mix(in srgb, var(--vbg-surface-contrast) 34%, transparent)"
               strokeDasharray="6 8"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -140,7 +148,7 @@ function TrendChart({
             <path
               d={pathFor('value')}
               fill="none"
-              stroke="var(--color-kumo-brand)"
+              stroke="var(--vbg-chart-1)"
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="3"
@@ -150,9 +158,9 @@ function TrendChart({
                 key={point.label}
                 cx={xFor(index)}
                 cy={yFor(point.value)}
-                fill="var(--color-kumo-base)"
+                fill="var(--vbg-surface-primary)"
                 r="4"
-                stroke="var(--color-kumo-brand)"
+                stroke="var(--vbg-chart-1)"
                 strokeWidth="2"
               />
             ))}
@@ -165,14 +173,14 @@ function TrendChart({
               x2="0"
               y1={chart.top}
               y2={chart.bottom}
-              className="stroke-kumo-line"
+              stroke="var(--vbg-border-subtle)"
               opacity={index === 0 || index === data.length - 1 ? 0 : 0.35}
             />
             <text
               x="0"
               y={chart.labelY}
-              className="text-xs"
-              fill="var(--text-color-kumo-subtle)"
+              className="vbg-dashboard-chart__label"
+              fill="var(--vbg-text-secondary)"
               textAnchor="middle"
             >
               {point.label}
@@ -197,17 +205,17 @@ function TrendChart({
       </svg>
       {activePoint ? (
         <div
-          className="pointer-events-none absolute z-10 min-w-28 rounded-lg bg-kumo-contrast px-3 py-2 text-xs text-kumo-inverse shadow-lg"
+          className="vbg-custom-chart-tooltip vbg-dashboard-chart-tooltip"
           style={{left: `${tooltipLeft}%`, top: `${tooltipTop}%`, transform: tooltipTransform}}
         >
-          <div className="mb-1 font-medium">{activePoint.label}</div>
-          <div className="flex items-center justify-between gap-4">
+          <div className="vbg-dashboard-chart-tooltip__title">{activePoint.label}</div>
+          <div className="vbg-dashboard-chart-tooltip__row">
             <span>{actualLabel}</span>
-            <span className="font-medium">{activePoint.value}</span>
+            <span className="vbg-dashboard-chart-tooltip__value">{activePoint.value}</span>
           </div>
-          <div className="flex items-center justify-between gap-4 opacity-80">
+          <div className="vbg-dashboard-chart-tooltip__row vbg-dashboard-chart-tooltip__row--muted">
             <span>{targetLabel}</span>
-            <span className="font-medium">{activePoint.target}</span>
+            <span className="vbg-dashboard-chart-tooltip__value">{activePoint.target}</span>
           </div>
         </div>
       ) : null}
@@ -223,15 +231,15 @@ function TrendLegend({
   targetLabel: string;
 }) {
   return (
-    <div className="flex items-center gap-3 text-xs text-kumo-subtle">
-      <span className="inline-flex items-center gap-1.5">
-        <span className="size-2 rounded-full bg-kumo-brand" />
+    <div className="vbg-dashboard-legend">
+      <span className="vbg-dashboard-legend__item">
+        <span className="vbg-dashboard-legend__dot vbg-dashboard-legend__dot--actual" />
         {actualLabel}
       </span>
-      <span className="inline-flex items-center gap-1.5">
+      <span className="vbg-dashboard-legend__item">
         <span
-          className="size-2 rounded-full ring-1 ring-kumo-line"
-          style={{background: 'color-mix(in srgb, var(--color-kumo-contrast) 18%, transparent)'}}
+          className="vbg-dashboard-legend__dot vbg-dashboard-legend__dot--target"
+          style={{background: 'color-mix(in srgb, var(--vbg-surface-contrast) 12%, transparent)'}}
         />
         {targetLabel}
       </span>
@@ -281,7 +289,7 @@ export function DashboardPage({locale}: {locale: Locale}) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="vbg-dashboard-page">
       <PageTitle
         title={copy.title}
         actions={
@@ -296,17 +304,17 @@ export function DashboardPage({locale}: {locale: Locale}) {
         }
       />
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="vbg-dashboard-metric-grid">
         {data.metrics.map(metric => <MetricCard key={metric.label} metric={metric} />)}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
-        <LayerCard className="min-w-0">
+      <section className="vbg-dashboard-grid">
+        <LayerCard>
           <LayerCard.Secondary>
             <SectionTitle
               title={copy.trendTitle}
               aside={
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="vbg-dashboard-chart-actions">
                   <Badge variant="blue">{copy.months}</Badge>
                   <TrendLegend actualLabel={copy.actualValue} targetLabel={copy.targetValue} />
                   <Tabs
@@ -317,8 +325,8 @@ export function DashboardPage({locale}: {locale: Locale}) {
                       {
                         value: 'bar',
                         label: (
-                          <span className="inline-flex items-center gap-1">
-                            <ChartBar className="size-3.5" />
+                          <span className="vbg-dashboard-tab-label">
+                            <ChartBar className="vbg-custom-icon vbg-custom-icon--sm" />
                             {copy.barChart}
                           </span>
                         ),
@@ -326,8 +334,8 @@ export function DashboardPage({locale}: {locale: Locale}) {
                       {
                         value: 'line',
                         label: (
-                          <span className="inline-flex items-center gap-1">
-                            <ChartLine className="size-3.5" />
+                          <span className="vbg-dashboard-tab-label">
+                            <ChartLine className="vbg-custom-icon vbg-custom-icon--sm" />
                             {copy.lineChart}
                           </span>
                         ),
@@ -349,15 +357,15 @@ export function DashboardPage({locale}: {locale: Locale}) {
           </LayerCard.Primary>
         </LayerCard>
 
-        <LayerCard className="min-w-0">
+        <LayerCard>
           <LayerCard.Secondary>
             <SectionTitle title={copy.distribution} />
           </LayerCard.Secondary>
           <LayerCard.Primary>
-            <div className="flex flex-col gap-4">
+            <div className="vbg-dashboard-module-list">
               {data.modules.map(item => (
-                <div key={item.label} className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-3">
+                <div key={item.label} className="vbg-dashboard-module-item">
+                  <div className="vbg-dashboard-module-item__row">
                     <Text as="span">{item.label}</Text>
                     <Badge variant={colorToBadgeVariant(item.color)}>{item.value}%</Badge>
                   </div>
@@ -370,14 +378,14 @@ export function DashboardPage({locale}: {locale: Locale}) {
       </section>
 
       <Card>
-        <div className="flex flex-col gap-4">
+        <div className="vbg-dashboard-activity">
           <SectionTitle title={copy.activity} aside={<Text variant="secondary" size="sm">{copy.latest}</Text>} />
-          <div className="divide-y divide-kumo-line">
+          <div className="vbg-custom-list vbg-custom-activity-list">
             {data.activities.map(activity => (
-              <div key={activity.id} className="flex gap-3 py-4 first:pt-0 last:pb-0">
+              <div key={activity.id} className="vbg-dashboard-activity__item">
                 <StatusBadge tone={activityTone(activity.status)}>{activity.title}</StatusBadge>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="vbg-dashboard-activity__copy">
+                  <div className="vbg-dashboard-activity__row">
                     <Text as="span" bold>{activity.title}</Text>
                     <Text variant="secondary" size="sm" as="time">{activity.time}</Text>
                   </div>

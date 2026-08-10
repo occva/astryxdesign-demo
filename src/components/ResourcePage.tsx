@@ -1,22 +1,26 @@
 import {useEffect, useMemo, useState} from 'react';
-import {Badge} from '@cloudflare/kumo/components/badge';
-import {Banner} from '@cloudflare/kumo/components/banner';
-import {Button} from '@cloudflare/kumo/components/button';
-import {Dialog} from '@cloudflare/kumo/components/dialog';
-import {Pagination} from '@cloudflare/kumo/components/pagination';
-import {Table} from '@cloudflare/kumo/components/table';
-import {Text} from '@cloudflare/kumo/components/text';
 import {
   ArrowsDownUp,
   DownloadSimple,
   MagnifyingGlass,
   Plus,
   Trash,
-} from '@phosphor-icons/react';
+} from './vercel-icons';
 import {mockApi} from '../services/mockApi';
 import type {AdminRecord, MockQuery, ResourceField, ResourceSchema} from '../types';
 import {FieldValue} from './FieldValue';
-import {Card, FormDateInput, FormInput, FormSelect, PageTitle} from './kumo-ui';
+import {
+  Banner,
+  Button,
+  Dialog,
+  FormDateInput,
+  FormInput,
+  FormSelect,
+  PageTitle,
+  Pagination,
+  Table,
+  Text,
+} from './report-ui';
 import {uiCopy, type Locale} from '../localization';
 
 type DialogMode = 'create' | 'edit' | null;
@@ -60,6 +64,17 @@ function hasTimePortion(value: unknown) {
 function isDateTimeField(field: ResourceField, value: unknown) {
   const key = field.key.toLowerCase();
   return hasTimePortion(value) || key.endsWith('at') || key.includes('time');
+}
+
+function isNumericField(field: ResourceField) {
+  return field.kind === 'number' || field.kind === 'currency' || field.kind === 'progress';
+}
+
+function tableColumnClassName(field: ResourceField) {
+  return [
+    'vbg-custom-resource-table__cell',
+    isNumericField(field) ? 'vbg-custom-resource-table__cell--numeric' : '',
+  ].filter(Boolean).join(' ');
 }
 
 function FormField({
@@ -248,7 +263,7 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
   };
 
   return (
-    <div className="flex min-w-0 flex-col gap-5" data-testid={`resource-page-${schema.id}`}>
+    <div className="vbg-custom-resource-page" data-testid={`resource-page-${schema.id}`}>
       <PageTitle
         title={schema.title}
         actions={
@@ -277,55 +292,57 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
         }
       />
 
-      <Card className="p-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <section className="vbg-custom-filterbar" aria-label={copy.search}>
+        <div className="vbg-custom-filterbar__fields">
           {filters.map(field => {
             if (field.kind === 'select' || field.kind === 'status') {
               return (
-                <div key={field.key} className="min-w-48 flex-1">
-                  <FormSelect
-                    label={field.label}
-                    value={query.filters?.[field.key] ?? ''}
-                    options={[
-                      {label: locale === 'zh' ? `${copy.all}${field.label}` : `${copy.all} ${field.label.toLowerCase()}`, value: ''},
-                      ...(field.options ?? []).map(option => ({
-                        label: option.label,
-                        value: option.value,
-                      })),
-                    ]}
-                    onValueChange={value => setFilter(field.key, value)}
-                  />
-                </div>
+                <FormSelect
+                  key={field.key}
+                  className="vbg-custom-filterbar__field"
+                  label={field.label}
+                  value={query.filters?.[field.key] ?? ''}
+                  options={[
+                    {label: locale === 'zh' ? `${copy.all}${field.label}` : `${copy.all} ${field.label.toLowerCase()}`, value: ''},
+                    ...(field.options ?? []).map(option => ({
+                      label: option.label,
+                      value: option.value,
+                    })),
+                  ]}
+                  onValueChange={value => setFilter(field.key, value)}
+                />
               );
             }
 
             if (field.kind === 'date') {
               const value = query.filters?.[field.key] ?? '';
               return (
-                <div key={field.key} className="min-w-48 flex-1">
-                  <FormDateInput
-                    label={field.label}
-                    value={value}
-                    onValueChange={next => setFilter(field.key, next)}
-                    placeholder={locale === 'zh' ? `${copy.select}${field.label}` : `${copy.select} ${field.label.toLowerCase()}`}
-                    locale={locale}
-                  />
-                </div>
+                <FormDateInput
+                  key={field.key}
+                  className="vbg-custom-filterbar__field"
+                  label={field.label}
+                  value={value}
+                  onValueChange={next => setFilter(field.key, next)}
+                  placeholder={locale === 'zh' ? `${copy.select}${field.label}` : `${copy.select} ${field.label.toLowerCase()}`}
+                  locale={locale}
+                />
               );
             }
 
             return (
-              <div key={field.key} className="min-w-48 flex-1">
-                <FormInput
-                  label={field.label}
-                  value={query.filters?.[field.key] ?? ''}
-                  onValueChange={value => setFilter(field.key, value)}
-                  placeholder={fieldPrompt(copy.enter, field.label)}
-                  type={field.kind === 'email' ? 'email' : 'text'}
-                />
-              </div>
+              <FormInput
+                key={field.key}
+                className="vbg-custom-filterbar__field"
+                label={field.label}
+                value={query.filters?.[field.key] ?? ''}
+                onValueChange={value => setFilter(field.key, value)}
+                placeholder={fieldPrompt(copy.enter, field.label)}
+                type={field.kind === 'email' ? 'email' : 'text'}
+              />
             );
           })}
+        </div>
+        <div className="vbg-custom-filterbar__actions">
           <Button icon={MagnifyingGlass} onClick={refresh}>{copy.search}</Button>
           <Button variant="secondary" onClick={resetFilters}>{copy.reset}</Button>
           <Button
@@ -341,25 +358,23 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
             {query.sortDirection === 'asc' ? copy.ascending : copy.descending}
           </Button>
         </div>
-      </Card>
+      </section>
 
-      <Card className="min-w-0 overflow-hidden p-0">
-        <div className="max-w-full overflow-x-auto border-b border-kumo-line">
+      <section className="vbg-custom-resource-table">
+        <div className="vbg-custom-resource-table__scroll">
           {rows.length > 0 ? (
             <Table style={{minWidth: `${tableMinWidthRem}rem`}}>
-              <Table.Header
-                sticky
-                className="[&_th]:bg-kumo-elevated [&_th]:shadow-[inset_0_-1px_0_var(--color-kumo-line)]"
-              >
+              <Table.Caption>{schema.title}</Table.Caption>
+              <Table.Header sticky>
                 <Table.Row>
                   {visibleFields.map(field => (
-                    <Table.Head key={field.key} className="whitespace-nowrap">
+                    <Table.Head key={field.key} className={tableColumnClassName(field)}>
                       {field.label}
                     </Table.Head>
                   ))}
                   <Table.Head
                     sticky="right"
-                    className="w-36 min-w-36 whitespace-nowrap bg-kumo-elevated before:to-kumo-elevated"
+                    className="vbg-custom-resource-table__actions-head"
                   >
                     {copy.actions}
                   </Table.Head>
@@ -369,7 +384,7 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
                 {rows.map(item => (
                   <Table.Row key={item.id}>
                     {visibleFields.map(field => (
-                      <Table.Cell key={field.key} className="max-w-72 whitespace-nowrap">
+                      <Table.Cell key={field.key} className={tableColumnClassName(field)}>
                         {field.key === schema.primaryField ? (
                           <Text as="span" bold truncate>{String(item[field.key] ?? '')}</Text>
                         ) : (
@@ -377,8 +392,8 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
                         )}
                       </Table.Cell>
                     ))}
-                    <Table.Cell sticky="right" className="w-36 min-w-36 bg-kumo-base">
-                      <div className="flex items-center gap-1 whitespace-nowrap">
+                    <Table.Cell sticky="right" className="vbg-custom-resource-table__actions-cell">
+                      <div className="vbg-custom-row-actions">
                         <Button
                           size="sm"
                           variant="secondary"
@@ -406,13 +421,13 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
               </Table.Body>
             </Table>
           ) : (
-            <div className="flex flex-col items-center gap-2 px-6 py-12 text-center">
+            <div className="vbg-custom-empty-state">
               <Text variant="heading3" as="h2">{copy.noResults}</Text>
               <Text variant="secondary">{copy.noResultsHint}</Text>
             </div>
           )}
         </div>
-        <div className="flex justify-end p-4">
+        <div className="vbg-custom-resource-table__footer">
           <Pagination
             page={query.page}
             setPage={page => setQuery(current => ({...current, page}))}
@@ -447,18 +462,18 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
             <Pagination.Controls pageSelector="input" />
           </Pagination>
         </div>
-      </Card>
+      </section>
 
       <Dialog.Root open={dialogMode !== null} onOpenChange={open => !open && setDialogMode(null)}>
-        <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
-          <div className="flex flex-col gap-5">
+        <Dialog size="xl" className="vbg-custom-resource-dialog">
+          <div className="vbg-custom-resource-dialog__body">
             <Dialog.Title>
               {dialogMode === 'create'
                 ? locale === 'zh' ? `${copy.add}${schema.title}` : `${copy.add} ${schema.title}`
                 : locale === 'zh' ? `${copy.edit}${schema.title}` : `${copy.edit} ${schema.title}`}
             </Dialog.Title>
             {formMessage ? <Banner variant="error" title={formMessage} /> : null}
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="vbg-custom-resource-dialog__grid">
               {editableFields(schema).map(field => (
                 <FormField
                   key={field.key}
@@ -477,7 +492,7 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
                 />
               ))}
             </div>
-            <div className="flex justify-end gap-2">
+            <div className="vbg-custom-resource-dialog__footer">
               <Button variant="secondary" onClick={() => setDialogMode(null)}>{copy.cancel}</Button>
               <Button variant="primary" loading={isSaving} onClick={saveDraft}>{copy.save}</Button>
             </div>
@@ -486,11 +501,11 @@ export function ResourcePage({schema, locale}: {schema: ResourceSchema; locale: 
       </Dialog.Root>
 
       <Dialog.Root role="alertdialog" open={confirmDelete !== null} onOpenChange={open => !open && setConfirmDelete(null)}>
-        <Dialog size="base" className="p-6">
-          <div className="flex flex-col gap-4">
+        <Dialog size="base" className="vbg-custom-resource-dialog">
+          <div className="vbg-custom-resource-dialog__body vbg-custom-resource-dialog__body--compact">
             <Dialog.Title>{copy.deleteTitle}</Dialog.Title>
             <Dialog.Description>{copy.deleteDescription}</Dialog.Description>
-            <div className="flex justify-end gap-2">
+            <div className="vbg-custom-resource-dialog__footer">
               <Button variant="secondary" onClick={() => setConfirmDelete(null)}>{copy.cancel}</Button>
               <Button variant="destructive" onClick={deleteRecord}>{copy.delete}</Button>
             </div>

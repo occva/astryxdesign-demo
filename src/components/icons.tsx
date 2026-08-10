@@ -1,4 +1,4 @@
-import type {Icon as PhosphorIcon} from '@phosphor-icons/react';
+import type {ComponentType} from 'react';
 import {
   ChartBar,
   GearSix,
@@ -8,7 +8,8 @@ import {
   UserCircle,
   UserGear,
   Users,
-} from '@phosphor-icons/react';
+  type VercelIconProps,
+} from './vercel-icons';
 import type {IconKey} from '../types';
 
 const icons = {
@@ -19,7 +20,7 @@ const icons = {
   club: SquaresFour,
   settings: GearSix,
   profile: UserCircle,
-} satisfies Record<IconKey, PhosphorIcon>;
+} satisfies Record<IconKey, ComponentType<VercelIconProps>>;
 
 export function ModuleIcon({
   name,
@@ -29,5 +30,5 @@ export function ModuleIcon({
   className?: string;
 }) {
   const Icon = icons[name] ?? SlidersHorizontal;
-  return <Icon className={className ?? 'size-4'} weight="duotone" />;
+  return <Icon className={className ?? 'vbg-custom-icon'} />;
 }

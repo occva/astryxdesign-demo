@@ -1,8 +1,4 @@
-import {Badge} from '@cloudflare/kumo/components/badge';
-import {Meter} from '@cloudflare/kumo/components/meter';
-import {Popover} from '@cloudflare/kumo/components/popover';
-import {Text} from '@cloudflare/kumo/components/text';
-import {colorToBadgeVariant, StatusBadge} from './kumo-ui';
+import {Badge, Meter, Popover, Text, colorToBadgeVariant, StatusBadge} from './report-ui';
 import type {ResourceField, StatusTone} from '../types';
 import {uiCopy, type Locale} from '../localization';
 
@@ -36,29 +32,29 @@ export function FieldValue({field, value, locale}: {field: ResourceField; value:
     const hiddenCount = Math.max(tags.length - visibleTags.length, 0);
 
     return (
-      <div className="flex min-w-0 items-center gap-1 whitespace-nowrap">
+      <div className="vbg-table-tags">
         {visibleTags.map(tag => (
-          <Badge key={tag} variant="secondary">{tag}</Badge>
+          <span className="vbg-table-tag" key={tag}>{tag}</span>
         ))}
         {hiddenCount > 0 ? (
           <Popover>
             <Popover.Trigger
               render={
                 <button
-                  className="inline-flex rounded-full"
+                  className="vbg-table-tag vbg-table-tag--more"
                   type="button"
                   aria-label={locale === 'zh'
                     ? `${uiCopy.zh.resource.viewTags}${tags.length}${uiCopy.zh.resource.tags}`
                     : `${uiCopy.en.resource.viewTags} ${tags.length} ${uiCopy.en.resource.tags}`}
                 >
-                  <Badge variant="secondary">+{hiddenCount}</Badge>
+                  +{hiddenCount}
                 </button>
               }
             />
-            <Popover.Content side="top" align="start" positionMethod="fixed" className="max-w-72">
-              <div className="flex flex-wrap gap-1">
+            <Popover.Content side="top" align="center" className="vbg-table-tags-popover">
+              <div className="vbg-table-tags-popover__grid">
                 {tags.map(tag => (
-                  <Badge key={tag} variant="secondary">{tag}</Badge>
+                  <span className="vbg-table-tag" key={tag}>{tag}</span>
                 ))}
               </div>
             </Popover.Content>
@@ -71,7 +67,7 @@ export function FieldValue({field, value, locale}: {field: ResourceField; value:
   if (field.kind === 'progress') {
     const progress = Number(value) || 0;
     return (
-      <div className="min-w-32">
+      <div className="vbg-custom-progress-cell">
         <Meter label={`${field.label} ${progress}%`} value={progress} showValue={false} />
         <Text variant="secondary" size="sm">{progress}%</Text>
       </div>

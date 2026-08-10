@@ -1,9 +1,4 @@
 import {useEffect, useId, useState, type ChangeEvent, type ReactElement, type ReactNode} from 'react';
-import {Banner} from '@cloudflare/kumo/components/banner';
-import {Button} from '@cloudflare/kumo/components/button';
-import {Dialog} from '@cloudflare/kumo/components/dialog';
-import {Switch} from '@cloudflare/kumo/components/switch';
-import {Text} from '@cloudflare/kumo/components/text';
 import {
   Buildings,
   EnvelopeSimple,
@@ -11,26 +6,31 @@ import {
   PencilSimpleLine,
   Phone,
   ShieldCheck,
-} from '@phosphor-icons/react';
+} from './vercel-icons';
 import {mockApi} from '../services/mockApi';
 import type {SecuritySetting, UserCenterData, UserProfile} from '../types';
 import {
   Avatar,
+  Badge,
+  Banner,
+  Button,
   Card,
+  Dialog,
   FormInput,
   FormSelect,
   SectionTitle,
   StatusBadge,
+  Switch,
+  Text,
   colorToBadgeVariant,
-} from './kumo-ui';
-import {Badge} from '@cloudflare/kumo/components/badge';
+} from './report-ui';
 import {uiCopy, type Locale} from '../localization';
 
 function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
   return (
-    <dl className="grid gap-4 sm:grid-cols-2">
+    <dl className="vbg-user-detail-grid">
       {items.map(item => (
-        <div key={item.label} className="min-w-0">
+        <div key={item.label} className="vbg-user-detail-grid__item">
           <Text as="dt" variant="secondary" size="sm">{item.label}</Text>
           <Text as="dd" truncate>{item.value}</Text>
         </div>
@@ -49,10 +49,10 @@ function ProfileFormSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-kumo-line p-4">
-      <div className="flex flex-col gap-4">
+    <section className="vbg-custom-group">
+      <div className="vbg-user-section">
         <SectionTitle
-          title={<span className="inline-flex items-center gap-2">{icon}{title}</span>}
+          title={<span className="vbg-user-section-title">{icon}{title}</span>}
         />
         {children}
       </div>
@@ -98,37 +98,37 @@ function ProfileDialog({
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog size="xl" className="flex max-h-[88dvh] flex-col overflow-hidden p-0">
-        <div className="border-b border-kumo-line px-6 py-5">
+      <Dialog size="xl" className="vbg-user-profile-dialog">
+        <div className="vbg-custom-dialog__header">
           <Dialog.Title>{copy.editTitle}</Dialog.Title>
         </div>
-        <div className="min-h-0 overflow-y-auto px-6 py-5">
+        <div className="vbg-user-profile-dialog__content">
           {profileDraft ? (
-            <div className="flex flex-col gap-4">
+            <div className="vbg-user-section">
               {message ? <Banner variant="error" title={message} /> : null}
-              <div className="flex flex-col gap-4">
-                <section className="rounded-lg border border-kumo-line p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+              <div className="vbg-user-section">
+                <section className="vbg-custom-group">
+                  <div className="vbg-user-avatar-editor">
                     <Avatar
                       name={profileDraft.name}
                       src={profileDraft.avatarUrl}
-                      className="size-20 border border-kumo-line shadow-sm"
+                      className="vbg-user-avatar-editor__avatar"
                     />
-                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                      <div className="min-w-0">
+                    <div className="vbg-user-avatar-editor__body">
+                      <div className="vbg-user-avatar-editor__copy">
                         <Text size="sm" bold>{copy.avatar}</Text>
                         <Text variant="secondary" size="sm">{copy.avatarHint}</Text>
                       </div>
                       <div>
                         <input
                           id={avatarInputId}
-                          className="sr-only"
+                          className="vbg-visually-hidden"
                           type="file"
                           accept="image/*"
                           onChange={updateAvatar}
                         />
                         <label
-                          className="inline-flex cursor-pointer items-center rounded-lg border border-kumo-line bg-kumo-elevated px-3 py-1.5 text-sm font-medium text-kumo-strong hover:bg-kumo-tint"
+                          className="vbg-button vbg-button--secondary vbg-user-file-button"
                           htmlFor={avatarInputId}
                         >
                           {copy.chooseAvatar}
@@ -140,9 +140,9 @@ function ProfileDialog({
 
                 <ProfileFormSection
                   title={copy.profileDetails}
-                  icon={<IdentificationCard className="size-5" />}
+                  icon={<IdentificationCard className="vbg-custom-icon vbg-custom-icon--lg" />}
                 >
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="vbg-user-form-grid">
                     <FormInput
                       label={copy.name}
                       value={profileDraft.name}
@@ -165,9 +165,9 @@ function ProfileDialog({
 
                 <ProfileFormSection
                   title={copy.contactDetails}
-                  icon={<Phone className="size-5" />}
+                  icon={<Phone className="vbg-custom-icon vbg-custom-icon--lg" />}
                 >
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="vbg-user-form-grid">
                     <FormInput
                       label={copy.email}
                       value={profileDraft.email}
@@ -196,7 +196,7 @@ function ProfileDialog({
             </div>
           ) : null}
         </div>
-        <div className="flex justify-end gap-2 border-t border-kumo-line bg-kumo-elevated px-6 py-4">
+        <div className="vbg-custom-dialog__footer">
           <Button variant="secondary" onClick={() => onOpenChange(false)}>{copy.cancel}</Button>
           <Button variant="primary" loading={isSaving} onClick={onSave}>{copy.save}</Button>
         </div>
@@ -227,8 +227,8 @@ function SecurityDialog({
   const copy = uiCopy[locale].userCenter;
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog size="lg" className="p-6">
-        <div className="flex flex-col gap-5">
+      <Dialog size="lg" className="vbg-user-security-dialog">
+        <div className="vbg-user-security-dialog__body">
           <Dialog.Title>{copy.securityTitle}</Dialog.Title>
           {message ? (
             <Banner
@@ -237,12 +237,12 @@ function SecurityDialog({
               action={<Button size="sm" variant="secondary" onClick={onMessageDismiss}>{copy.dismiss}</Button>}
             />
           ) : null}
-          <div className="flex flex-col gap-4">
+          <div className="vbg-user-section">
             {data.securitySettings.map(setting => (
-              <div key={setting.key} className="rounded-lg border border-kumo-line p-4">
+              <div key={setting.key} className="vbg-custom-group">
                 <Switch
                   label={
-                    <span className="flex flex-col gap-1">
+                    <span className="vbg-user-switch-label">
                       <span>{setting.label}</span>
                       <Text as="span" variant="secondary" size="sm">{setting.description}</Text>
                     </span>
@@ -256,7 +256,7 @@ function SecurityDialog({
               </div>
             ))}
           </div>
-          <div className="flex justify-end">
+          <div className="vbg-user-dialog-actions">
             <Button variant="primary" onClick={() => onOpenChange(false)}>{copy.done}</Button>
           </div>
         </div>
@@ -361,47 +361,47 @@ export function UserCenterPanel({
       : 'success';
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="vbg-user-page">
       <Card>
-        <div className="flex flex-wrap items-center justify-between gap-5">
-          <div className="flex min-w-0 items-center gap-4">
+        <div className="vbg-user-hero">
+          <div className="vbg-user-hero__identity">
             <Avatar name={data.profile.name} src={data.profile.avatarUrl} size="lg" />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="vbg-user-hero__copy">
+              <div className="vbg-user-hero__name">
                 <Text variant="heading1" as="h1">{data.profile.name}</Text>
                 <StatusBadge tone={profileStatusTone}>{data.profile.status}</StatusBadge>
               </div>
               <Text variant="secondary">
                 {data.profile.title} · {data.profile.department} · {data.profile.employeeId}
               </Text>
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="vbg-user-meta-row">
                 <Badge variant="neutral">{data.profile.account}</Badge>
                 <Badge variant="blue">{data.profile.email}</Badge>
                 <Badge variant="neutral">{data.profile.location}</Badge>
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="vbg-user-hero__actions">
             <Button variant="secondary" icon={PencilSimpleLine} onClick={openProfileDialog}>{copy.editProfile}</Button>
             <Button variant="primary" icon={ShieldCheck} onClick={() => setIsSecurityDialogOpen(true)}>{copy.securitySettings}</Button>
           </div>
         </div>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.45fr)]">
-        <div className="flex flex-col gap-4">
+      <div className="vbg-user-grid">
+        <div className="vbg-user-section">
           <Card>
-            <div className="flex flex-col gap-4">
-              <SectionTitle title={<span className="inline-flex items-center gap-2"><IdentificationCard className="size-5" />{copy.profileDetails}</span>} />
+            <div className="vbg-user-section">
+              <SectionTitle title={<span className="vbg-user-section-title"><IdentificationCard className="vbg-custom-icon vbg-custom-icon--lg" />{copy.profileDetails}</span>} />
               <DetailGrid items={data.personalDetails} />
             </div>
           </Card>
 
           <Card>
-            <div className="flex flex-col gap-4">
-              <SectionTitle title={<span className="inline-flex items-center gap-2"><Phone className="size-5" />{copy.contactDetails}</span>} />
+            <div className="vbg-user-section">
+              <SectionTitle title={<span className="vbg-user-section-title"><Phone className="vbg-custom-icon vbg-custom-icon--lg" />{copy.contactDetails}</span>} />
               <DetailGrid items={data.contactDetails} />
-              <div className="flex flex-wrap gap-2">
+              <div className="vbg-user-button-row">
                 <Button
                   variant="secondary"
                   icon={EnvelopeSimple}
@@ -426,10 +426,10 @@ export function UserCenterPanel({
         </div>
 
         <Card>
-          <div className="flex flex-col gap-4">
-            <SectionTitle title={<span className="inline-flex items-center gap-2"><Buildings className="size-5" />{copy.organization}</span>} />
+          <div className="vbg-user-section">
+            <SectionTitle title={<span className="vbg-user-section-title"><Buildings className="vbg-custom-icon vbg-custom-icon--lg" />{copy.organization}</span>} />
             <DetailGrid items={data.organizationDetails} />
-            <div className="flex flex-wrap gap-2">
+            <div className="vbg-user-meta-row">
               <Badge variant="purple">{data.profile.role}</Badge>
               <Badge variant={colorToBadgeVariant('blue')}>{data.profile.department}</Badge>
             </div>

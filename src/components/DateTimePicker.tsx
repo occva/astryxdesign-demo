@@ -1,8 +1,9 @@
-import {useEffect, useMemo, useState} from 'react';
-import {Popover} from '@cloudflare/kumo/components/popover';
-import {Text} from '@cloudflare/kumo/components/text';
-import {CalendarBlank, CaretLeft, CaretRight, Clock} from '@phosphor-icons/react';
-import {cn} from '@cloudflare/kumo/utils';
+import {useCallback, useEffect, useMemo, useRef, useState, type CSSProperties} from 'react';
+import {CalendarBlank, Clock, X} from './vercel-icons';
+
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
+}
 
 export type DateTimePickerLocale = 'en' | 'zh';
 
@@ -77,6 +78,10 @@ export function DateTimePicker({
   className,
 }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLSpanElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({});
+  const [panelSide, setPanelSide] = useState<'top' | 'bottom'>('bottom');
   const {date, time} = splitDateTimeValue(value);
   const selectedHour = time.slice(0, 2) || '00';
   const selectedMinute = time.slice(3, 5) || '00';
@@ -88,6 +93,59 @@ export function DateTimePicker({
     setVisibleMonth(parseIsoDate(date) ?? new Date());
   }, [date, open]);
 
+  const updatePanelPosition = useCallback(() => {
+    const trigger = rootRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const edge = 16;
+    const gap = 8;
+    const panelWidth = panelRef.current?.offsetWidth ?? (includeTime ? Math.min(520, viewportWidth - edge * 2) : 288);
+    const panelHeight = panelRef.current?.offsetHeight ?? (includeTime ? 360 : 328);
+    const shouldOpenUp = viewportHeight - rect.bottom < panelHeight + edge + gap && rect.top > panelHeight + edge + gap;
+    const nextTop = shouldOpenUp ? rect.top - panelHeight - gap : rect.bottom + gap;
+    const nextLeft = Math.min(Math.max(rect.left, edge), viewportWidth - panelWidth - edge);
+
+    setPanelSide(shouldOpenUp ? 'top' : 'bottom');
+    setPanelStyle({
+      left: `${nextLeft}px`,
+      top: `${Math.max(edge, Math.min(nextTop, viewportHeight - panelHeight - edge))}px`,
+    });
+  }, [includeTime]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    updatePanelPosition();
+    const frame = window.requestAnimationFrame(updatePanelPosition);
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', updatePanelPosition);
+    window.addEventListener('scroll', updatePanelPosition, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', updatePanelPosition);
+      window.removeEventListener('scroll', updatePanelPosition, true);
+    };
+  }, [open, updatePanelPosition]);
+
   const days = useMemo(() => calendarDays(visibleMonth), [visibleMonth]);
   const monthLabel = useMemo(
     () => visibleMonth.toLocaleDateString(locale === 'zh' ? 'zh-CN' : 'en-US', {month: 'long', year: 'numeric'}),
@@ -98,14 +156,13 @@ export function DateTimePicker({
     ? ['日', '一', '二', '三', '四', '五', '六']
     : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const triggerClassName = cn(
-    'flex h-9 w-full items-center justify-between gap-2 rounded-lg border-0 bg-kumo-control px-3 text-left text-base ring ring-kumo-line outline-none',
-    'focus:ring-[1.5px] focus:ring-kumo-focus/50',
-    value ? 'text-kumo-default' : 'text-kumo-subtle',
-    invalid ? 'ring-kumo-danger focus:ring-kumo-danger/50' : '',
+    'vbg-custom-date-trigger',
+    value ? '' : 'vbg-custom-date-trigger--placeholder',
+    invalid ? 'vbg-custom-date-trigger--invalid' : '',
     className,
   );
-  const timeListClassName = 'mt-2 max-h-64 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
-  const timeOptionClassName = 'mb-1 flex h-8 w-full items-center justify-center rounded-md text-sm outline-none focus-visible:bg-kumo-tint';
+  const timeListClassName = 'vbg-custom-time-list';
+  const timeOptionClassName = 'vbg-custom-time-option';
 
   const selectDate = (nextDate: string) => {
     onValueChange(joinDateTimeValue(nextDate, time, includeTime));
@@ -124,49 +181,65 @@ export function DateTimePicker({
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <Popover.Trigger
-        render={
-          <button className={triggerClassName} type="button" aria-label={ariaLabel ?? displayValue}>
-            <span className="min-w-0 truncate">{displayValue}</span>
-            <CalendarBlank aria-hidden="true" className="size-4 shrink-0 text-kumo-subtle" />
-          </button>
-        }
-      />
-      <Popover.Content
-        side="bottom"
-        align="start"
-        sideOffset={8}
-        positionMethod="fixed"
-        className={cn('max-w-[calc(100vw-2rem)] p-3', includeTime ? 'w-72 sm:w-[32.25rem]' : 'w-72')}
+    <span className="vbg-custom-popover vbg-custom-date-popover" ref={rootRef}>
+      <button
+        className={triggerClassName}
+        data-clearable={Boolean(value) || undefined}
+        type="button"
+        aria-label={ariaLabel ?? displayValue}
+        aria-expanded={open}
+        onClick={() => setOpen(current => !current)}
       >
-        <div className={cn('grid gap-3', includeTime ? 'grid-cols-1 sm:grid-cols-[18rem_12rem]' : 'grid-cols-1')}>
-          <div className="min-w-0">
-            <div className="flex items-center justify-between gap-2">
+        <span className="vbg-custom-truncate">{displayValue}</span>
+        <CalendarBlank aria-hidden="true" className="vbg-custom-icon" />
+      </button>
+      {value ? (
+        <button
+          className="vbg-custom-field-clear"
+          type="button"
+          aria-label={locale === 'zh' ? '清除日期' : 'Clear date'}
+          onClick={() => {
+            onValueChange('');
+            setOpen(false);
+          }}
+        >
+          <X className="vbg-custom-icon vbg-custom-icon--xs" />
+        </button>
+      ) : null}
+      {open ? (
+      <div
+        className={cn('vbg-custom-popover__content vbg-custom-date-panel', includeTime ? 'vbg-custom-date-panel--with-time' : '')}
+        data-side={panelSide}
+        ref={panelRef}
+        style={panelStyle}
+      >
+        <div className="vbg-custom-date-grid">
+          <div className="vbg-custom-date-calendar">
+            <div className="vbg-custom-date-nav">
               <button
                 type="button"
-                className="inline-flex size-8 items-center justify-center rounded-lg text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
+                className="vbg-custom-icon-button"
                 aria-label={locale === 'zh' ? '上个月' : 'Previous month'}
                 onClick={() => setVisibleMonth(current => addMonths(current, -1))}
               >
-                <CaretLeft aria-hidden="true" className="size-4" />
+                <span className="vbg-custom-date-nav__arrow vbg-custom-date-nav__arrow--left" aria-hidden="true" />
               </button>
-              <Text as="span" bold>{monthLabel}</Text>
+              <span className="vbg-custom-text vbg-custom-text--bold">{monthLabel}</span>
               <button
                 type="button"
-                className="inline-flex size-8 items-center justify-center rounded-lg text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default"
+                className="vbg-custom-icon-button"
                 aria-label={locale === 'zh' ? '下个月' : 'Next month'}
                 onClick={() => setVisibleMonth(current => addMonths(current, 1))}
               >
-                <CaretRight aria-hidden="true" className="size-4" />
+                <span className="vbg-custom-date-nav__arrow vbg-custom-date-nav__arrow--right" aria-hidden="true" />
               </button>
             </div>
-            <div className="mt-3 grid grid-cols-7 gap-1 text-center text-xs font-medium text-kumo-subtle">
+            <div className="vbg-custom-weekdays">
               {weekdays.map((day, index) => (
                 <span key={`${day}-${index}`}>{day}</span>
               ))}
             </div>
-            <div className="mt-1 grid grid-cols-7 gap-1">
+            <div className="vbg-custom-days">
               {days.map(day => {
                 const nextDate = dateToIsoDate(day);
                 const isSelected = nextDate === date;
@@ -177,11 +250,10 @@ export function DateTimePicker({
                     key={nextDate}
                     type="button"
                     className={cn(
-                      'flex aspect-square items-center justify-center rounded-lg text-sm outline-none focus:ring-[1.5px] focus:ring-kumo-focus/50',
-                      isSelected ? 'bg-kumo-brand text-white' : 'hover:bg-kumo-tint',
-                      !isSelected && isMuted ? 'text-kumo-disabled' : '',
-                      !isSelected && !isMuted ? 'text-kumo-default' : '',
-                      !isSelected && isToday ? 'ring ring-kumo-line' : '',
+                      'vbg-custom-day',
+                      isSelected ? 'vbg-custom-day--selected' : '',
+                      !isSelected && isMuted ? 'vbg-custom-day--muted' : '',
+                      !isSelected && isToday ? 'vbg-custom-day--today' : '',
                     )}
                     onClick={() => selectDate(nextDate)}
                   >
@@ -192,16 +264,16 @@ export function DateTimePicker({
             </div>
           </div>
           {includeTime ? (
-            <div className="min-w-0 border-t border-kumo-line pt-3 sm:border-l sm:border-t-0 sm:pl-3 sm:pt-0">
-              <div className="mb-2 flex items-center gap-1.5 text-sm font-medium text-kumo-strong">
-                <Clock aria-hidden="true" className="size-4 text-kumo-subtle" />
+            <div className="vbg-custom-time-panel">
+              <div className="vbg-custom-time-title">
+                <Clock aria-hidden="true" className="vbg-custom-icon" />
                 <span>{locale === 'zh' ? '时间' : 'Time'}</span>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="vbg-custom-time-grid">
                 <div>
-                  <Text as="span" variant="secondary" size="xs">
+                  <span className="vbg-meta">
                     {locale === 'zh' ? '时' : 'Hour'}
-                  </Text>
+                  </span>
                   <div className={timeListClassName}>
                     {hourOptions.map(option => (
                       <button
@@ -209,7 +281,7 @@ export function DateTimePicker({
                         type="button"
                         className={cn(
                           timeOptionClassName,
-                          option === selectedHour ? 'bg-kumo-brand text-white' : 'text-kumo-default hover:bg-kumo-tint',
+                          option === selectedHour ? 'vbg-custom-time-option--selected' : '',
                         )}
                         onMouseDown={event => event.preventDefault()}
                         onClick={() => selectHour(option)}
@@ -220,9 +292,9 @@ export function DateTimePicker({
                   </div>
                 </div>
                 <div>
-                  <Text as="span" variant="secondary" size="xs">
+                  <span className="vbg-meta">
                     {locale === 'zh' ? '分' : 'Minute'}
-                  </Text>
+                  </span>
                   <div className={timeListClassName}>
                     {minuteOptions.map(option => (
                       <button
@@ -230,7 +302,7 @@ export function DateTimePicker({
                         type="button"
                         className={cn(
                           timeOptionClassName,
-                          option === selectedMinute ? 'bg-kumo-brand text-white' : 'text-kumo-default hover:bg-kumo-tint',
+                          option === selectedMinute ? 'vbg-custom-time-option--selected' : '',
                         )}
                         onMouseDown={event => event.preventDefault()}
                         onClick={() => selectMinute(option)}
@@ -244,7 +316,8 @@ export function DateTimePicker({
             </div>
           ) : null}
         </div>
-      </Popover.Content>
-    </Popover>
+      </div>
+      ) : null}
+    </span>
   );
 }

@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Badge } from "@cloudflare/kumo/components/badge";
-import { Banner } from "@cloudflare/kumo/components/banner";
-import { Button } from "@cloudflare/kumo/components/button";
-import { Dialog } from "@cloudflare/kumo/components/dialog";
-import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
-import { Link } from "@cloudflare/kumo/components/link";
-import { Sidebar } from "@cloudflare/kumo/components/sidebar";
-import { Text } from "@cloudflare/kumo/components/text";
+import {
+  Avatar,
+  Badge,
+  Banner,
+  Button,
+  Card,
+  Dialog,
+  DropdownMenu,
+  Link,
+  Sidebar,
+  Text,
+  FormInput,
+} from "./components/report-ui";
 import {
   Bell,
+  DotsThreeHorizontal,
   GearSix,
   Moon,
   SignIn,
@@ -16,7 +22,7 @@ import {
   Sun,
   Translate,
   X,
-} from "@phosphor-icons/react";
+} from "./components/vercel-icons";
 import { mockApi } from "./services/mockApi";
 import type {
   AppConfig,
@@ -32,7 +38,6 @@ import { DashboardPage } from "./components/DashboardPage";
 import { ResourcePage } from "./components/ResourcePage";
 import { UserCenterPage } from "./components/UserCenterPage";
 import { ModuleIcon } from "./components/icons";
-import { Avatar, Card, FormInput } from "./components/kumo-ui";
 import {
   LOCALE_STORAGE_KEY,
   localeMeta,
@@ -44,10 +49,8 @@ type AuthMode = "login" | "register";
 type ThemeMode = "light" | "dark";
 
 const SIDEBAR_STORAGE_KEY = "kumo-demo-sidebar-open";
-const COLLAPSED_SIDEBAR_BUTTON_CLASS =
-  "group-data-[state=collapsed]/sidebar:mx-auto group-data-[state=collapsed]/sidebar:size-10 group-data-[state=collapsed]/sidebar:min-h-10 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:px-0 group-data-[state=collapsed]/sidebar:py-0 group-data-[state=collapsed]/sidebar:[&>div]:w-full group-data-[state=collapsed]/sidebar:[&>div]:translate-x-0 group-data-[state=collapsed]/sidebar:[&>div]:justify-center group-data-[state=collapsed]/sidebar:[&>div>span]:hidden";
-const SIDEBAR_ACTIVE_CLASS =
-  "data-[active]:bg-kumo-fill data-[active]:text-kumo-strong data-[active]:[&_svg]:opacity-75";
+const COLLAPSED_SIDEBAR_BUTTON_CLASS = "";
+const SIDEBAR_ACTIVE_CLASS = "";
 
 const notificationColors: Record<
   AppNotification["status"],
@@ -92,10 +95,8 @@ function findParentModule(
 
 function BrandMark({ className = "" }: { className?: string }) {
   return (
-    <img
-      className={`size-8 shrink-0 rounded-xl ${className}`}
-      src="/original-logo.png"
-      alt=""
+    <span
+      className={`vbg-logo vbg-custom-brand-mark ${className}`}
       aria-hidden="true"
     />
   );
@@ -110,10 +111,11 @@ function sidebarIcon(name: AppModule["icon"]) {
 function dropdownModuleIcon(name: AppModule["icon"], active = false) {
   return (
     <span
-      className={`mr-2 inline-flex size-5 shrink-0 items-center justify-center ${active ? "text-kumo-strong" : "text-kumo-subtle"}`}
+      className="vbg-sidebar-flyout-menu__icon"
+      data-active={active || undefined}
       aria-hidden="true"
     >
-      <ModuleIcon name={name} className="size-4" />
+      <ModuleIcon name={name} className="vbg-custom-icon" />
     </span>
   );
 }
@@ -176,9 +178,9 @@ function AuthPage({
   };
 
   return (
-    <main className="relative grid min-h-screen place-items-center bg-kumo-canvas px-6 py-10">
+    <main className="vbg-custom-auth">
       <Button
-        className="absolute right-6 top-6"
+        className="vbg-custom-auth__locale"
         shape="square"
         variant="secondary"
         icon={Translate}
@@ -186,16 +188,16 @@ function AuthPage({
         title={localeMeta[locale].switchLabel}
         onClick={onLocaleToggle}
       />
-      <div className="flex w-full max-w-[24rem] flex-col gap-5">
-        <div className="flex flex-col items-center gap-2 text-center">
+      <div className="vbg-custom-auth__panel">
+        <div className="vbg-custom-auth__brand">
           <BrandMark />
           <Text variant="secondary" size="sm">
             {appConfig.profile.name}
           </Text>
         </div>
-        <Card className="p-6 sm:p-7">
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-1">
+        <Card className="vbg-custom-auth-card">
+          <div className="vbg-custom-auth-form">
+            <div className="vbg-custom-auth-form__header">
               <Text variant="heading2" as="h1">
                 {isRegister ? copy.registerTitle : copy.loginTitle}
               </Text>
@@ -206,7 +208,7 @@ function AuthPage({
               </Text>
             </div>
             {message ? <Banner variant="error" title={message} /> : null}
-            <div className="flex flex-col gap-4">
+            <div className="vbg-custom-auth-form__fields">
               {isRegister ? (
                 <FormInput
                   label={copy.name}
@@ -233,7 +235,7 @@ function AuthPage({
               />
             </div>
             <Button
-              className="w-full justify-center"
+              className="vbg-custom-auth-form__submit"
               variant="primary"
               icon={SignIn}
               loading={isSubmitting}
@@ -241,7 +243,7 @@ function AuthPage({
             >
               {isRegister ? copy.registerAction : copy.loginAction}
             </Button>
-            <div className="flex flex-wrap justify-center gap-1 text-sm">
+            <div className="vbg-custom-auth-form__switch">
               <Text as="span" variant="secondary">
                 {isRegister ? copy.hasAccount : copy.newHere}
               </Text>
@@ -280,9 +282,9 @@ function NotificationCenter({
 
   return (
     <Dialog.Root open onOpenChange={(open) => !open && onClose()}>
-      <Dialog size="xl" className="max-h-[82dvh] overflow-y-auto p-6">
-        <div className="flex flex-col gap-5">
-          <div className="flex items-center justify-between gap-3">
+      <Dialog size="lg" className="vbg-notification-dialog">
+        <div className="vbg-notification-dialog__body">
+          <div className="vbg-notification-dialog__header">
             <Dialog.Title>{copy.title}</Dialog.Title>
             <Button
               size="sm"
@@ -294,15 +296,15 @@ function NotificationCenter({
             </Button>
           </div>
           {notifications.length > 0 ? (
-            <div className="divide-y divide-kumo-line rounded-lg border border-kumo-line">
+            <div className="vbg-custom-list">
               {notifications.map((item) => (
                 <button
                   key={item.id}
-                  className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-kumo-tint"
+                  className="vbg-custom-list__button"
                   type="button"
                   onClick={() => onMarkRead(item.id)}
                 >
-                  <span className="min-w-0">
+                  <span className="vbg-notification-dialog__item-copy">
                     <Text as="span" bold>
                       {item.title}
                     </Text>
@@ -331,7 +333,7 @@ function NotificationCenter({
           ) : (
             <Text variant="secondary">{copy.empty}</Text>
           )}
-          <div className="flex justify-end">
+          <div className="vbg-notification-dialog__footer">
             <Button onClick={onClose}>{copy.close}</Button>
           </div>
         </div>
@@ -452,8 +454,23 @@ export function App() {
   };
 
   const accountMenuItems = accountMenuActions.flatMap((item) => {
-    if (item.id === "theme" || item.id === "notifications") {
+    if (item.id === "notifications") {
       return [];
+    }
+    if (item.id === "theme") {
+      return [
+        {
+          label:
+            themeMode === "dark"
+              ? locale === "zh" ? "切换到浅色" : "Switch to light"
+              : locale === "zh" ? "切换到深色" : "Switch to dark",
+          icon: themeMode === "dark" ? Sun : Moon,
+          onClick: () =>
+            setThemeMode((current) =>
+              current === "dark" ? "light" : "dark",
+            ),
+        },
+      ];
     }
     if (item.id === "logout") {
       return [
@@ -513,9 +530,8 @@ export function App() {
   if (!appConfig || !authUsers || !isSessionChecked) {
     return (
       <div
-        data-theme="kumo"
+        className="vbg-report vbg-custom-loading"
         data-mode={themeMode}
-        className="min-h-screen bg-kumo-canvas p-6 text-kumo-default"
       >
         <Card>
           <Text>{copy.loading}</Text>
@@ -527,9 +543,8 @@ export function App() {
   if (!isAuthenticated) {
     return (
       <div
-        data-theme="kumo"
+        className="vbg-report"
         data-mode={themeMode}
-        className="min-h-screen text-kumo-default"
       >
         <AuthPage
           appConfig={appConfig}
@@ -550,9 +565,8 @@ export function App() {
   if (!activeModule || !appProfile) {
     return (
       <div
-        data-theme="kumo"
+        className="vbg-report vbg-custom-loading"
         data-mode={themeMode}
-        className="min-h-screen bg-kumo-canvas p-6 text-kumo-default"
       >
         <Card>
           <Text>{copy.loading}</Text>
@@ -572,7 +586,6 @@ export function App() {
         return (
           <Sidebar.MenuItem
             key={item.id}
-            className="group-data-[state=collapsed]/sidebar:overflow-visible"
           >
             <DropdownMenu>
               <DropdownMenu.Trigger
@@ -585,13 +598,13 @@ export function App() {
                   />
                 }
               />
-              <DropdownMenu.Content side="right" align="start" className="min-w-44 p-2">
+              <DropdownMenu.Content side="right" align="start" className="vbg-sidebar-flyout-menu">
                 {item.children.map((child) => {
                   const isChildActive = activePage === child.id;
                   return (
                     <DropdownMenu.Item
                       key={child.id}
-                      className={`min-h-10 px-3 py-2 text-sm font-medium ${isChildActive ? "bg-kumo-fill text-kumo-strong" : "text-kumo-default"}`}
+                      className={isChildActive ? "is-active" : ""}
                       icon={dropdownModuleIcon(child.icon, isChildActive)}
                       onClick={() => navigate(child.id)}
                     >
@@ -609,7 +622,6 @@ export function App() {
       return (
         <Sidebar.MenuItem
           key={item.id}
-          className="group-data-[state=collapsed]/sidebar:overflow-visible"
         >
           <Sidebar.Collapsible
             open={isGroupOpen}
@@ -651,7 +663,6 @@ export function App() {
     return (
       <Sidebar.MenuItem
         key={item.id}
-        className="group-data-[state=collapsed]/sidebar:overflow-visible"
       >
         <Sidebar.MenuButton
           className={`${COLLAPSED_SIDEBAR_BUTTON_CLASS} ${SIDEBAR_ACTIVE_CLASS}`}
@@ -681,25 +692,23 @@ export function App() {
 
   return (
     <div
-      data-theme="kumo"
+      className="vbg-report"
       data-mode={themeMode}
-      className="h-dvh overflow-hidden bg-kumo-canvas text-kumo-default"
     >
       <Sidebar.Provider
         open={isSidebarOpen}
         onOpenChange={updateSidebarOpen}
         collapsible="icon"
-        className="h-full overflow-hidden"
       >
-        <Sidebar className="h-dvh shrink-0" contentClassName="bg-kumo-elevated">
-          <Sidebar.Header className="border-kumo-line/45">
+        <Sidebar>
+          <Sidebar.Header>
             <button
-              className={`flex w-full min-w-0 items-center gap-3 rounded-lg p-2 text-left hover:bg-kumo-tint ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
+              className={`vbg-custom-sidebar__brand ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
               type="button"
               onClick={() => navigate("charts")}
             >
-              <BrandMark className="group-data-[state=collapsed]/sidebar:size-8" />
-              <span className="min-w-0 truncate font-semibold group-data-[state=collapsed]/sidebar:hidden">
+              <BrandMark className="vbg-custom-sidebar__brand-mark" />
+              <span className="vbg-custom-sidebar__brand-label">
                 {appProfile.name}
               </span>
             </button>
@@ -712,10 +721,10 @@ export function App() {
               </Sidebar.Group>
             ))}
           </Sidebar.Content>
-          <Sidebar.Footer className="h-auto border-t-0 !bg-transparent !px-3 py-2 group-data-[state=collapsed]/sidebar:border-r-0">
-            <div className="group/user-entry -mx-1.5 flex w-[calc(100%+0.75rem)] min-w-0 items-center gap-1.5 rounded-xl px-2 py-2 transition-colors hover:bg-kumo-fill group-data-[state=collapsed]/sidebar:mx-auto group-data-[state=collapsed]/sidebar:size-10 group-data-[state=collapsed]/sidebar:w-10 group-data-[state=collapsed]/sidebar:justify-center group-data-[state=collapsed]/sidebar:p-0">
+          <Sidebar.Footer>
+            <div className="vbg-custom-sidebar-footer-row">
               <button
-                className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-1.5 py-1 text-left transition-colors group-data-[state=collapsed]/sidebar:flex-none ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
+                className={`vbg-custom-user-entry__button ${COLLAPSED_SIDEBAR_BUTTON_CLASS}`}
                 type="button"
                 aria-label={copy.openUserCenter}
                 title={copy.openUserCenter}
@@ -724,13 +733,13 @@ export function App() {
                 <Avatar
                   name={sidebarUserName}
                   src={userProfile?.avatarUrl}
-                  className="size-6 shrink-0"
+                  className="vbg-custom-avatar--sidebar"
                 />
-                <span className="flex min-w-0 flex-1 flex-col gap-px group-data-[state=collapsed]/sidebar:hidden">
-                  <span className="truncate text-sm font-medium leading-4 text-kumo-strong">
+                <span className="vbg-custom-sidebar-user-copy">
+                  <span className="vbg-custom-sidebar-user-copy__name">
                     {sidebarUserName}
                   </span>
-                  <span className="truncate text-[12px] leading-4 text-kumo-subtle">
+                  <span className="vbg-custom-sidebar-user-copy__meta">
                     {sidebarUserDepartment}
                   </span>
                 </span>
@@ -739,15 +748,16 @@ export function App() {
                 <DropdownMenu.Trigger
                   render={
                     <button
-                      className="grid size-9 shrink-0 place-items-center rounded-lg text-kumo-default/70 transition-colors hover:!bg-kumo-contrast/10 hover:text-kumo-strong focus:!bg-kumo-contrast/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kumo-contrast/20 data-[state=open]:!bg-kumo-contrast/10 group-hover/user-entry:text-kumo-default/85 group-data-[state=collapsed]/sidebar:hidden"
+                      className="vbg-custom-sidebar-footer-action"
                       type="button"
                       aria-label={copy.accountMenu}
+                      title={copy.accountMenu}
                     >
-                      <GearSix className="size-4" />
+                      <DotsThreeHorizontal className="vbg-custom-icon" />
                     </button>
                   }
                 />
-                <DropdownMenu.Content side="top" align="start">
+                <DropdownMenu.Content side={isSidebarOpen ? "top" : "right"} align={isSidebarOpen ? "start" : "end"}>
                   {accountMenuItems.map((item) => (
                     <DropdownMenu.Item
                       key={item.label}
@@ -759,19 +769,28 @@ export function App() {
                   ))}
                 </DropdownMenu.Content>
               </DropdownMenu>
+              <button
+                className="vbg-custom-sidebar-footer-action"
+                type="button"
+                aria-label={copy.notificationsLabel}
+                title={copy.notificationsLabel}
+                onClick={() => setIsNotificationCenterOpen(true)}
+              >
+                <Bell className="vbg-custom-icon" />
+              </button>
             </div>
           </Sidebar.Footer>
         </Sidebar>
 
-        <main className="flex h-dvh min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex min-h-18 flex-wrap items-center justify-between gap-3 border-b border-kumo-line bg-kumo-elevated/85 px-6 py-4 backdrop-blur">
-            <div className="flex min-w-0 items-center gap-3">
+        <main className="vbg-custom-main">
+          <header className="vbg-custom-topbar">
+            <div className="vbg-custom-topbar__left">
               <Sidebar.Trigger aria-label={copy.collapseNavigation} />
-              <div className="flex min-w-0 items-center gap-2 text-sm text-kumo-subtle">
-                {activeGroup && groupLanding ? (
+              <div className="vbg-custom-breadcrumbs">
+                {activeGroup && groupLanding && activeParent?.title !== activeGroup ? (
                   <>
                     <button
-                      className="truncate rounded px-1 hover:text-kumo-default"
+                      className="vbg-custom-breadcrumbs__button"
                       type="button"
                       onClick={() => navigate(groupLanding.id)}
                     >
@@ -783,7 +802,7 @@ export function App() {
                 {activeParent ? (
                   <>
                     <button
-                      className="truncate rounded px-1 hover:text-kumo-default"
+                      className="vbg-custom-breadcrumbs__button"
                       type="button"
                       onClick={() => navigate(activeParent.id)}
                     >
@@ -792,12 +811,12 @@ export function App() {
                     <span>/</span>
                   </>
                 ) : null}
-                <span className="truncate font-medium text-kumo-default">
+                <span className="vbg-custom-breadcrumbs__current">
                   {activeModule.title}
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="vbg-custom-topbar__actions">
               <Button
                 shape="square"
                 variant="secondary"
@@ -806,68 +825,47 @@ export function App() {
                 title={localeMeta[locale].switchLabel}
                 onClick={toggleLocale}
               />
-              <Button
-                shape="square"
-                variant="secondary"
-                icon={themeMode === "dark" ? Sun : Moon}
-                aria-label={copy.toggleTheme}
-                onClick={() =>
-                  setThemeMode((current) =>
-                    current === "dark" ? "light" : "dark",
-                  )
-                }
-              />
-              <Button
-                shape="square"
-                variant="secondary"
-                icon={Bell}
-                aria-label={copy.notificationsLabel}
-                onClick={() => setIsNotificationCenterOpen(true)}
-              />
             </div>
           </header>
 
-          <nav className="flex min-h-12 gap-1 overflow-x-auto border-b border-kumo-line bg-kumo-base px-4 py-2 shadow-[inset_0_-1px_0_var(--color-kumo-line)]">
+          <nav className="vbg-custom-tabsbar">
             {openedPages.map((pageId) => {
               const page = allModules.find((item) => item.id === pageId);
               if (!page) return null;
               const isSelected = activePage === pageId;
               return (
-                <button
+                <span
                   key={pageId}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${isSelected ? "border-kumo-line bg-kumo-elevated text-kumo-strong shadow-sm" : "border-transparent text-kumo-subtle hover:border-kumo-line hover:bg-kumo-tint hover:text-kumo-default"}`}
-                  type="button"
-                  onClick={() => navigate(pageId)}
+                  className="vbg-custom-page-tab"
+                  data-active={isSelected || undefined}
                 >
-                  <ModuleIcon name={page.icon} className="size-4" />
-                  <span>{page.title}</span>
+                  <button
+                    className="vbg-custom-page-tab__main"
+                    type="button"
+                    aria-current={isSelected ? "page" : undefined}
+                    onClick={() => navigate(pageId)}
+                  >
+                    <span>{page.title}</span>
+                  </button>
                   {openedPages.length > 1 ? (
-                    <span
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
                       aria-label={`${copy.closePage} ${page.title}`}
-                      className="rounded p-0.5 hover:bg-kumo-fill"
+                      className="vbg-custom-page-tab__close"
                       onClick={(event) => {
                         event.stopPropagation();
                         closeTab(pageId);
                       }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          closeTab(pageId);
-                        }
-                      }}
                     >
-                      <X className="size-3" />
-                    </span>
+                      <X className="vbg-custom-icon vbg-custom-icon--xs" />
+                    </button>
                   ) : null}
-                </button>
+                </span>
               );
             })}
           </nav>
 
-          <section className="min-h-0 min-w-0 flex-1 overflow-auto p-6">
+          <section className="vbg-custom-page">
             {renderPage()}
           </section>
         </main>
