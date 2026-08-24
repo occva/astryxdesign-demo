@@ -1,10 +1,13 @@
 import {Badge} from '@cloudflare/kumo/components/badge';
+import {Button} from '@cloudflare/kumo/components/button';
 import {Meter} from '@cloudflare/kumo/components/meter';
 import {Popover} from '@cloudflare/kumo/components/popover';
 import {Text} from '@cloudflare/kumo/components/text';
+import {useTranslation} from 'react-i18next';
 import {colorToBadgeVariant, StatusBadge} from './kumo-ui';
 import type {ResourceField, StatusTone} from '../types';
-import {uiCopy, type Locale} from '../localization';
+import {currentLanguage, languageRegistry} from '../i18n';
+import {MenuIcon} from './icons';
 
 function optionFor(field: ResourceField, value: unknown) {
   return field.options?.find(option => option.value === String(value));
@@ -20,7 +23,9 @@ function formatDateValue(value: unknown) {
   return text.replace('T', ' ').slice(0, text.includes(':') ? 16 : 10);
 }
 
-export function FieldValue({field, value, locale}: {field: ResourceField; value: unknown; locale: Locale}) {
+export function FieldValue({field, value}: {field: ResourceField; value: unknown}) {
+  const {t} = useTranslation('resource');
+  const language = currentLanguage();
   if (field.kind === 'status') {
     const option = optionFor(field, value);
     return (
@@ -44,15 +49,14 @@ export function FieldValue({field, value, locale}: {field: ResourceField; value:
           <Popover>
             <Popover.Trigger
               render={
-                <button
-                  className="inline-flex rounded-full"
-                  type="button"
-                  aria-label={locale === 'zh'
-                    ? `${uiCopy.zh.resource.viewTags}${tags.length}${uiCopy.zh.resource.tags}`
-                    : `${uiCopy.en.resource.viewTags} ${tags.length} ${uiCopy.en.resource.tags}`}
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  className="rounded-full p-0"
+                  aria-label={t('viewTags', {count: tags.length})}
                 >
                   <Badge variant="secondary">+{hiddenCount}</Badge>
-                </button>
+                </Button>
               }
             />
             <Popover.Content side="top" align="start" positionMethod="fixed" className="max-w-72">
@@ -79,7 +83,7 @@ export function FieldValue({field, value, locale}: {field: ResourceField; value:
   }
 
   if (field.kind === 'currency') {
-    return <Text as="span">{locale === 'zh' ? '¥' : '$'}{Number(value).toLocaleString(locale === 'zh' ? 'zh-CN' : 'en-US')}</Text>;
+    return <Text as="span">{new Intl.NumberFormat(language, {style:'currency', currency:languageRegistry[language].currency}).format(Number(value))}</Text>;
   }
 
   if (field.kind === 'date') {
@@ -97,6 +101,20 @@ export function FieldValue({field, value, locale}: {field: ResourceField; value:
       return <Badge variant={colorToBadgeVariant(option.color)}>{option.label}</Badge>;
     }
     return <Text as="span">{option?.label ?? String(value ?? '')}</Text>;
+  }
+
+  if (field.kind === 'icon') {
+    const option = optionFor(field, value);
+    return (
+      <span
+        className="inline-flex size-8 items-center justify-center rounded-md bg-kumo-tint text-kumo-default"
+        title={option?.label ?? String(value ?? '')}
+        aria-label={option?.label ?? String(value ?? '')}
+        role="img"
+      >
+        <MenuIcon code={String(value ?? '')} className="size-4" />
+      </span>
+    );
   }
 
   return <Text as="span" truncate>{String(value ?? '')}</Text>;

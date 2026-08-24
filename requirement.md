@@ -108,7 +108,7 @@ npx @cloudflare/kumo migrate
 
 不在本次范围内：
 
-- 不重写 `mockApi`、mock 数据结构或业务类型，除非旧 UI 类型依赖必须移除。
+- 运行时数据统一通过 NestJS 接口读取数据库，不保留 `mockApi`、Mock 数据或接口失败回退。
 - 不改变路由/导航结构、默认打开页面、资源 schema、表单校验规则、CSV 导出逻辑。
 - 不新增真实后端接口。
 

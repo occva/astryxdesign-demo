@@ -1,10 +1,14 @@
 {
   "name": "kumo-admin-demo",
   "version": "1.0.0",
-  "description": "Mock-driven extensible admin framework built with Cloudflare Kumo.",
+  "description": "Database-driven extensible admin framework built with Cloudflare Kumo and NestJS.",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k -n web,api -c blue,green \"npm:dev:web\" \"npm:dev:api\"",
+    "dev:web": "vite",
+    "dev:api": "tsx watch --tsconfig server/tsconfig.json server/main.ts",
     "build": "tsc -p tsconfig.json && vite build",
+    "typecheck:api": "tsc -p server/tsconfig.json --noEmit",
+    "provision:auth-accounts": "tsx --tsconfig server/tsconfig.json server/scripts/provision-auth-accounts.ts",
     "preview": "vite preview"
   },
   "repository": {
@@ -21,19 +25,38 @@
   "homepage": "https://github.com/occva/astryxdesign-demo#readme",
   "dependencies": {
     "@cloudflare/kumo": "^2.7.0",
+    "@nestjs/common": "^11.1.29",
+    "@nestjs/core": "^11.1.29",
+    "@nestjs/mapped-types": "^2.1.1",
+    "@nestjs/platform-express": "^11.1.29",
     "@number-flow/react": "^0.6.2",
     "@phosphor-icons/react": "^2.1.10",
+    "@supabase/supabase-js": "^2.112.3",
+    "@tanstack/react-query": "^5.101.4",
+    "@xyflow/react": "^12.11.3",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "date-fns": "^4.1.0",
     "echarts": "^6.1.0",
+    "elkjs": "^0.12.0",
+    "i18next": "^26.3.6",
+    "papaparse": "^5.6.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "zod": "^4.4.3"
+    "react-i18next": "^17.0.11",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.2",
+    "@types/node": "^24.13.3",
+    "@types/papaparse": "^5.5.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "concurrently": "^10.0.4",
     "tailwindcss": "^4.3.2",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "vite": "^7.3.6"
   }

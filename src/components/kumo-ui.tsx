@@ -1,12 +1,16 @@
 import type {ReactNode} from 'react';
 import {Badge} from '@cloudflare/kumo/components/badge';
 import type {BadgeVariant} from '@cloudflare/kumo/components/badge';
-import {Input} from '@cloudflare/kumo/components/input';
+import {Input, InputGroup} from '@cloudflare/kumo/components/input';
 import type {InputProps} from '@cloudflare/kumo/components/input';
+import {Field} from '@cloudflare/kumo/components/field';
 import {LayerCard} from '@cloudflare/kumo/components/layer-card';
+import {SkeletonLine} from '@cloudflare/kumo/components/loader';
 import {Select} from '@cloudflare/kumo/components/select';
 import {Text} from '@cloudflare/kumo/components/text';
 import {cn} from '@cloudflare/kumo/utils';
+import {Eye, EyeSlash} from '@phosphor-icons/react';
+import {useState} from 'react';
 import {DateTimePicker} from './DateTimePicker';
 import type {DateTimePickerLocale} from './DateTimePicker';
 
@@ -45,6 +49,10 @@ export function Card({
   );
 }
 
+export function Skeleton({className}: {className?: string}) {
+  return <SkeletonLine minWidth={100} maxWidth={100} className={className} />;
+}
+
 export function SectionTitle({
   title,
   aside,
@@ -79,6 +87,53 @@ export function FormInput({
       className={cn('w-full', className)}
       onChange={event => onValueChange(event.currentTarget.value)}
     />
+  );
+}
+
+export function FormPasswordInput({
+  value,
+  onValueChange,
+  showLabel,
+  hideLabel,
+  label,
+  required,
+  error,
+  autoComplete,
+  autoFocus,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+  showLabel: string;
+  hideLabel: string;
+  label: ReactNode;
+  required?: boolean;
+  error?: string;
+  autoComplete?: string;
+  autoFocus?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+  const visibilityLabel = visible ? hideLabel : showLabel;
+  return (
+    <InputGroup label={label} required={required} error={error ? {message: error, match: true} : undefined}>
+      <InputGroup.Input
+        value={value}
+        type={visible ? 'text' : 'password'}
+        aria-label={typeof label === 'string' ? label : undefined}
+        autoComplete={autoComplete}
+        autoFocus={autoFocus}
+        onChange={event => onValueChange(event.currentTarget.value)}
+      />
+      <InputGroup.Addon align="end">
+        <InputGroup.Button
+          type="button"
+          icon={visible ? EyeSlash : Eye}
+          tooltip={visibilityLabel}
+          aria-label={visibilityLabel}
+          aria-pressed={visible}
+          onClick={() => setVisible(current => !current)}
+        />
+      </InputGroup.Addon>
+    </InputGroup>
   );
 }
 
@@ -125,7 +180,7 @@ export function FormDateInput({
   onValueChange,
   includeTime,
   placeholder,
-  locale = 'en',
+  locale = 'en-US',
   error,
   required,
   className,
@@ -141,11 +196,11 @@ export function FormDateInput({
   className?: string;
 }) {
   return (
-    <div className={cn('block w-full', className)}>
-      <span className="mb-1.5 block text-sm font-medium text-kumo-strong">
-        {label}
-        {required ? <span aria-hidden="true"> *</span> : null}
-      </span>
+    <Field
+      label={label}
+      required={required}
+      error={error ? {message:error, match:true} : undefined}
+    >
       <DateTimePicker
         value={value}
         onValueChange={onValueChange}
@@ -154,51 +209,10 @@ export function FormDateInput({
         locale={locale}
         ariaLabel={String(label)}
         invalid={Boolean(error)}
+        clearable={!required}
+        className={className}
       />
-      {error ? <span className="mt-1 block text-sm text-kumo-danger">{error}</span> : null}
-    </div>
-  );
-}
-
-export function NativeSelect({
-  label,
-  value,
-  options,
-  onValueChange,
-  placeholder,
-  error,
-  required,
-  className,
-}: {
-  label: ReactNode;
-  value: string;
-  options: SelectItem[];
-  onValueChange: (value: string) => void;
-  placeholder?: string;
-  error?: string;
-  required?: boolean;
-  className?: string;
-}) {
-  const id = `select-${String(label).replace(/\s+/g, '-')}`;
-  return (
-    <label className={cn('block w-full', className)} htmlFor={id}>
-      <span className="mb-1.5 block text-sm font-medium text-kumo-strong">{label}</span>
-      <select
-        id={id}
-        required={required}
-        value={value}
-        className={cn('h-9 w-full rounded-lg border border-kumo-line bg-kumo-elevated px-3 text-base text-kumo-default outline-none focus:ring-2 focus:ring-kumo-focus/25', error ? 'border-kumo-danger' : '')}
-        onChange={event => onValueChange(event.currentTarget.value)}
-      >
-        {placeholder ? <option value="">{placeholder}</option> : null}
-        {options.map(option => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error ? <span className="mt-1 block text-sm text-kumo-danger">{error}</span> : null}
-    </label>
+    </Field>
   );
 }
 

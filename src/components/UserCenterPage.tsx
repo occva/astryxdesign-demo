@@ -1,476 +1,299 @@
-import {useEffect, useId, useState, type ChangeEvent, type ReactElement, type ReactNode} from 'react';
-import {Banner} from '@cloudflare/kumo/components/banner';
+import {useMemo, useRef, useState, type ReactNode} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Button} from '@cloudflare/kumo/components/button';
 import {Dialog} from '@cloudflare/kumo/components/dialog';
-import {Switch} from '@cloudflare/kumo/components/switch';
 import {Text} from '@cloudflare/kumo/components/text';
-import {
-  Buildings,
-  EnvelopeSimple,
-  IdentificationCard,
-  PencilSimpleLine,
-  Phone,
-  ShieldCheck,
-} from '@phosphor-icons/react';
-import {mockApi} from '../services/mockApi';
-import type {SecuritySetting, UserCenterData, UserProfile} from '../types';
-import {
-  Avatar,
-  Card,
-  FormInput,
-  FormSelect,
-  SectionTitle,
-  StatusBadge,
-  colorToBadgeVariant,
-} from './kumo-ui';
-import {Badge} from '@cloudflare/kumo/components/badge';
-import {uiCopy, type Locale} from '../localization';
+import {useKumoToastManager} from '@cloudflare/kumo/components/toast';
+import {Buildings, Camera, EnvelopeSimple, IdentificationCard, Key, PencilSimpleLine, Phone} from '@phosphor-icons/react';
+import {AuthenticationRequiredError, authApi} from '../services/authApi';
+import type {AuthSession} from '../types';
+import {currentLanguage, translationMap} from '../i18n';
+import {Avatar, Card, FormDateInput, FormInput, SectionTitle, Skeleton} from './kumo-ui';
 
-function DetailGrid({items}: {items: Array<{label: string; value: string}>}) {
+type Detail = {label: string; value: string; displayValue?: ReactNode};
+type ProfileDraft = Pick<AuthSession['user'],
+  'name' | 'email' | 'phone' | 'employeeNo' | 'jobTitle' | 'managerName' |
+  'enterpriseWechat' | 'emergencyContact' | 'officeLocation' | 'joinedAt'
+>;
+const emptyProfile: ProfileDraft = {name:'',email:'',phone:'',employeeNo:'',jobTitle:'',managerName:'',enterpriseWechat:'',emergencyContact:'',officeLocation:'',joinedAt:''};
+
+function DetailGrid({items, className}: {items: Detail[]; className?: string}) {
   return (
-    <dl className="grid gap-4 sm:grid-cols-2">
-      {items.map(item => (
-        <div key={item.label} className="min-w-0">
+    <dl className={`grid gap-4 ${className ?? 'sm:grid-cols-2'}`}>
+      {items.map((item) => (
+        <span key={item.label} className="min-w-0">
           <Text as="dt" variant="secondary" size="sm">{item.label}</Text>
-          <Text as="dd" truncate>{item.value}</Text>
-        </div>
+          <Text as="dd" truncate>{item.displayValue ?? item.value}</Text>
+        </span>
       ))}
     </dl>
   );
 }
 
-function ProfileFormSection({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon: ReactElement;
-  children: ReactNode;
-}) {
+function PhoneDisplay({value}: {value: string}) {
+  const match = value.match(/1\d{10}/);
+  if (!match || match.index === undefined) return value;
+  const phone = match[0];
+  const before = value.slice(0, match.index);
+  const after = value.slice(match.index + phone.length);
   return (
-    <section className="rounded-lg border border-kumo-line p-4">
-      <div className="flex flex-col gap-4">
-        <SectionTitle
-          title={<span className="inline-flex items-center gap-2">{icon}{title}</span>}
-        />
-        {children}
-      </div>
-    </section>
+    <>
+      {before}
+      <span className="inline-flex gap-1 whitespace-nowrap tabular-nums" aria-label={phone}>
+        <span>{phone.slice(0, 3)}</span>
+        <span>{phone.slice(3, 7)}</span>
+        <span>{phone.slice(7)}</span>
+      </span>
+      {after}
+    </>
   );
 }
 
-function ProfileDialog({
-  open,
-  profileDraft,
-  data,
-  message,
-  isSaving,
-  locale,
-  onOpenChange,
-  onDraftChange,
-  onSave,
+function availableDetails(items: Detail[]) {
+  return items.filter((item) => item.value?.trim());
+}
+
+function formatDate(value: string, language: string) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(language, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+export function UserCenterPage({
+  sessionUser,
+  onSessionChange,
 }: {
-  open: boolean;
-  profileDraft: UserProfile | null;
-  data: UserCenterData;
-  message: string | null;
-  isSaving: boolean;
-  locale: Locale;
-  onOpenChange: (open: boolean) => void;
-  onDraftChange: (profile: UserProfile) => void;
-  onSave: () => void;
+  sessionUser?: AuthSession['user'];
+  onSessionChange?: (session: AuthSession) => void;
 }) {
-  const copy = uiCopy[locale].userCenter;
-  const avatarInputId = useId();
-  const updateAvatar = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
-    if (!file || !profileDraft) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        onDraftChange({...profileDraft, avatarUrl: reader.result});
-      }
-    };
-    reader.readAsDataURL(file);
-    event.currentTarget.value = '';
+  const {t} = useTranslation(['userCenter', 'common']);
+  const toasts = useKumoToastManager();
+  const language = currentLanguage();
+  const copy = {
+    ...translationMap(['name','account','gender','employeeNo','joinedAt','createdAt','lastLoginAt','phone','email','enterpriseWechat','emergencyContact','department','jobTitle','systemRole','manager','departmentOwner','location','loading','profileSaveFailed','editProfile','profileDetails','contactDetails','sendEmail','callPhone','organization','editTitle','changeAvatar','avatarUploadFailed','changePassword','changePasswordTitle','newPassword','confirmNewPassword','passwordShort','passwordMismatch','passwordChanged','passwordChangeFailed'] as const, key => t(`userCenter:${key}`)),
+    ...translationMap(['cancel','save'] as const, key => t(`common:${key}`)),
   };
+  const [isEditing, setIsEditing] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [draft, setDraft] = useState(emptyProfile);
+  const [passwords, setPasswords] = useState({password:'', confirmation:''});
+  const [saving, setSaving] = useState(false);
+  const [avatarSaving,setAvatarSaving]=useState(false);
+  const avatarPicker=useRef<HTMLInputElement>(null);
 
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog size="xl" className="flex max-h-[88dvh] flex-col overflow-hidden p-0">
-        <div className="border-b border-kumo-line px-6 py-5">
-          <Dialog.Title>{copy.editTitle}</Dialog.Title>
-        </div>
-        <div className="min-h-0 overflow-y-auto px-6 py-5">
-          {profileDraft ? (
-            <div className="flex flex-col gap-4">
-              {message ? <Banner variant="error" title={message} /> : null}
-              <div className="flex flex-col gap-4">
-                <section className="rounded-lg border border-kumo-line p-4">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                    <Avatar
-                      name={profileDraft.name}
-                      src={profileDraft.avatarUrl}
-                      className="size-20 border border-kumo-line shadow-sm"
-                    />
-                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                      <div className="min-w-0">
-                        <Text size="sm" bold>{copy.avatar}</Text>
-                        <Text variant="secondary" size="sm">{copy.avatarHint}</Text>
-                      </div>
-                      <div>
-                        <input
-                          id={avatarInputId}
-                          className="sr-only"
-                          type="file"
-                          accept="image/*"
-                          onChange={updateAvatar}
-                        />
-                        <label
-                          className="inline-flex cursor-pointer items-center rounded-lg border border-kumo-line bg-kumo-elevated px-3 py-1.5 text-sm font-medium text-kumo-strong hover:bg-kumo-tint"
-                          htmlFor={avatarInputId}
-                        >
-                          {copy.chooseAvatar}
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-
-                <ProfileFormSection
-                  title={copy.profileDetails}
-                  icon={<IdentificationCard className="size-5" />}
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormInput
-                      label={copy.name}
-                      value={profileDraft.name}
-                      required
-                      onValueChange={name => onDraftChange({...profileDraft, name})}
-                    />
-                    <FormInput
-                      label={copy.location}
-                      value={profileDraft.location}
-                      onValueChange={location => onDraftChange({...profileDraft, location})}
-                    />
-                    <FormSelect
-                      label={copy.status}
-                      value={profileDraft.status}
-                      options={data.statusOptions}
-                      onValueChange={status => onDraftChange({...profileDraft, status})}
-                    />
-                  </div>
-                </ProfileFormSection>
-
-                <ProfileFormSection
-                  title={copy.contactDetails}
-                  icon={<Phone className="size-5" />}
-                >
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <FormInput
-                      label={copy.email}
-                      value={profileDraft.email}
-                      type="email"
-                      onValueChange={email => onDraftChange({...profileDraft, email})}
-                    />
-                    <FormInput
-                      label={copy.phone}
-                      value={profileDraft.phone}
-                      onValueChange={phone => onDraftChange({...profileDraft, phone})}
-                    />
-                    <FormInput
-                      label={copy.enterpriseWechat}
-                      value={profileDraft.enterpriseWechat}
-                      onValueChange={enterpriseWechat => onDraftChange({...profileDraft, enterpriseWechat})}
-                    />
-                    <FormInput
-                      label={copy.emergencyContact}
-                      value={profileDraft.emergencyContact}
-                      onValueChange={emergencyContact => onDraftChange({...profileDraft, emergencyContact})}
-                    />
-                  </div>
-                </ProfileFormSection>
-
-              </div>
-            </div>
-          ) : null}
-        </div>
-        <div className="flex justify-end gap-2 border-t border-kumo-line bg-kumo-elevated px-6 py-4">
-          <Button variant="secondary" onClick={() => onOpenChange(false)}>{copy.cancel}</Button>
-          <Button variant="primary" loading={isSaving} onClick={onSave}>{copy.save}</Button>
-        </div>
-      </Dialog>
-    </Dialog.Root>
-  );
-}
-
-function SecurityDialog({
-  open,
-  data,
-  message,
-  savingSecurityKey,
-  locale,
-  onOpenChange,
-  onMessageDismiss,
-  onToggle,
-}: {
-  open: boolean;
-  data: UserCenterData;
-  message: string | null;
-  savingSecurityKey: SecuritySetting['key'] | null;
-  locale: Locale;
-  onOpenChange: (open: boolean) => void;
-  onMessageDismiss: () => void;
-  onToggle: (setting: SecuritySetting, value: boolean) => void;
-}) {
-  const copy = uiCopy[locale].userCenter;
-  return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog size="lg" className="p-6">
-        <div className="flex flex-col gap-5">
-          <Dialog.Title>{copy.securityTitle}</Dialog.Title>
-          {message ? (
-            <Banner
-              variant="error"
-              title={message}
-              action={<Button size="sm" variant="secondary" onClick={onMessageDismiss}>{copy.dismiss}</Button>}
-            />
-          ) : null}
-          <div className="flex flex-col gap-4">
-            {data.securitySettings.map(setting => (
-              <div key={setting.key} className="rounded-lg border border-kumo-line p-4">
-                <Switch
-                  label={
-                    <span className="flex flex-col gap-1">
-                      <span>{setting.label}</span>
-                      <Text as="span" variant="secondary" size="sm">{setting.description}</Text>
-                    </span>
-                  }
-                  checked={setting.value}
-                  transitioning={savingSecurityKey === setting.key}
-                  disabled={savingSecurityKey !== null && savingSecurityKey !== setting.key}
-                  controlFirst={false}
-                  onCheckedChange={value => onToggle(setting, value)}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end">
-            <Button variant="primary" onClick={() => onOpenChange(false)}>{copy.done}</Button>
-          </div>
-        </div>
-      </Dialog>
-    </Dialog.Root>
-  );
-}
-
-export function UserCenterPanel({
-  locale,
-  onProfileSaved,
-}: {
-  locale: Locale;
-  onProfileSaved?: (profile: UserProfile) => void;
-}) {
-  const copy = uiCopy[locale].userCenter;
-  const [data, setData] = useState<UserCenterData | null>(null);
-  const [profileDraft, setProfileDraft] = useState<UserProfile | null>(null);
-  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
-  const [isSecurityDialogOpen, setIsSecurityDialogOpen] = useState(false);
-  const [profileMessage, setProfileMessage] = useState<string | null>(null);
-  const [securityMessage, setSecurityMessage] = useState<string | null>(null);
-  const [isProfileSaving, setIsProfileSaving] = useState(false);
-  const [savingSecurityKey, setSavingSecurityKey] = useState<SecuritySetting['key'] | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    Promise.all([
-      mockApi.getUserProfile(),
-      mockApi.getUserStatusOptions(),
-      mockApi.getUserProfileDetails(),
-      mockApi.getSecuritySettings(),
-    ]).then(([profile, statusOptions, details, securitySettings]) => {
-      if (mounted) {
-        setData({
-          profile,
-          statusOptions,
-          securitySettings,
-          ...details,
-        });
-      }
-    });
-    return () => {
-      mounted = false;
+  const details = useMemo(() => {
+    if (!sessionUser) return null;
+    return {
+      personal: availableDetails([
+        {label: copy.account, value: sessionUser.account},
+        {label: copy.gender, value: sessionUser.gender},
+        {label: copy.employeeNo, value: sessionUser.employeeNo},
+        {label: copy.joinedAt, value: sessionUser.joinedAt},
+        {label: copy.createdAt, value: formatDate(sessionUser.createdAt, language)},
+        {label: copy.lastLoginAt, value: formatDate(sessionUser.lastLoginAt, language)},
+      ]),
+      contact: availableDetails([
+        {label: copy.phone, value: sessionUser.phone, displayValue: <PhoneDisplay value={sessionUser.phone} />},
+        {label: copy.email, value: sessionUser.email},
+        {label: copy.enterpriseWechat, value: sessionUser.enterpriseWechat},
+        {
+          label: copy.emergencyContact,
+          value: sessionUser.emergencyContact,
+          displayValue: <PhoneDisplay value={sessionUser.emergencyContact} />,
+        },
+      ]),
+      organization: availableDetails([
+        {label: copy.department, value: sessionUser.department},
+        {label: copy.jobTitle, value: sessionUser.jobTitle},
+        {label: copy.systemRole, value: sessionUser.roleName},
+        {label: copy.departmentOwner, value: sessionUser.departmentOwner ?? ''},
+        {label: copy.location, value: sessionUser.officeLocation},
+      ]),
     };
-  }, [locale]);
+  }, [language, sessionUser, t]);
 
-  if (!data) {
+  if (!sessionUser || !details) {
     return (
-      <Card>
-        <Text>{copy.loading}</Text>
+      <Card aria-label={copy.loading}>
+        <div className="flex items-center gap-4"><Skeleton className="size-16 rounded-full" /><Skeleton className="h-7 w-48" /></div>
       </Card>
     );
   }
 
-  const openProfileDialog = () => {
-    setProfileDraft({...data.profile});
-    setProfileMessage(null);
-    setIsProfileDialogOpen(true);
+  const openEditor = () => {
+    setDraft({
+      name: sessionUser.name,
+      email: sessionUser.email,
+      phone: sessionUser.phone,
+      employeeNo: sessionUser.employeeNo,
+      jobTitle: sessionUser.jobTitle,
+      managerName: sessionUser.managerName,
+      enterpriseWechat: sessionUser.enterpriseWechat,
+      emergencyContact: sessionUser.emergencyContact,
+      officeLocation: sessionUser.officeLocation,
+      joinedAt: sessionUser.joinedAt,
+    });
+    setIsEditing(true);
   };
 
-  const saveProfile = async () => {
-    if (!profileDraft) return;
-    setIsProfileSaving(true);
+  const save = async () => {
+    if (!draft.name.trim() || (draft.email && !/^\S+@\S+\.\S+$/.test(draft.email))) {
+      return void toasts.add({title: copy.profileSaveFailed, variant: 'error'});
+    }
+    setSaving(true);
     try {
-      const profile = await mockApi.updateUserProfile(profileDraft);
-      const details = await mockApi.getUserProfileDetails();
-      setData(current => current ? {...current, profile, ...details} : current);
-      onProfileSaved?.(profile);
-      setProfileMessage(null);
-      setIsProfileDialogOpen(false);
+      const session = await authApi.updateProfile(draft);
+      onSessionChange?.(session);
+      setIsEditing(false);
     } catch (error) {
-      setProfileMessage(error instanceof Error ? error.message : copy.profileSaveFailed);
+      if (error instanceof AuthenticationRequiredError) return;
+      toasts.add({title: error instanceof Error ? error.message : copy.profileSaveFailed, variant: 'error'});
     } finally {
-      setIsProfileSaving(false);
+      setSaving(false);
     }
   };
 
-  const updateSecuritySetting = async (setting: SecuritySetting, value: boolean) => {
-    const nextSettings = data.securitySettings.map(item => (
-      item.key === setting.key ? {...item, value} : item
-    ));
-    const previous = data.securitySettings;
-    setSavingSecurityKey(setting.key);
-    setSecurityMessage(null);
-    setData(current => current ? {...current, securitySettings: nextSettings} : current);
+  const savePassword = async () => {
+    const validation = passwords.password.length < 6 ? copy.passwordShort
+      : passwords.password !== passwords.confirmation ? copy.passwordMismatch : '';
+    if (validation) return void toasts.add({title: validation, variant: 'error'});
+    setSaving(true);
     try {
-      const next = await mockApi.updateSecuritySettings(nextSettings);
-      setData(current => current ? {...current, securitySettings: next} : current);
+      await authApi.changePassword(passwords.password);
+      setIsChangingPassword(false);
+      setPasswords({password:'', confirmation:''});
+      toasts.add({title:copy.passwordChanged,variant:'success'});
     } catch (error) {
-      setSecurityMessage(error instanceof Error ? error.message : copy.securitySaveFailed);
-      setData(current => current ? {...current, securitySettings: previous} : current);
+      if (error instanceof AuthenticationRequiredError) return;
+      toasts.add({title:error instanceof Error?error.message:copy.passwordChangeFailed,variant:'error'});
     } finally {
-      setSavingSecurityKey(null);
+      setSaving(false);
     }
   };
 
-  const profileStatusTone = data.profile.status === copy.offlineStatus
-    ? 'neutral'
-    : data.profile.status === copy.busyStatus
-      ? 'warning'
-      : 'success';
+  const uploadAvatar=async(file:File)=>{
+    setAvatarSaving(true);
+    try{
+      const session=await authApi.updateAvatar(file);
+      onSessionChange?.(session);
+    }catch(error){
+      if(error instanceof AuthenticationRequiredError)return;
+      toasts.add({title:error instanceof Error?error.message:copy.avatarUploadFailed,variant:'error'});
+    }finally{
+      setAvatarSaving(false);
+      if(avatarPicker.current)avatarPicker.current.value='';
+    }
+  };
 
   return (
     <div className="flex flex-col gap-5">
       <Card>
-        <div className="flex flex-wrap items-center justify-between gap-5">
-          <div className="flex min-w-0 items-center gap-4">
-            <Avatar name={data.profile.name} src={data.profile.avatarUrl} size="lg" />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Text variant="heading1" as="h1">{data.profile.name}</Text>
-                <StatusBadge tone={profileStatusTone}>{data.profile.status}</StatusBadge>
-              </div>
-              <Text variant="secondary">
-                {data.profile.title} · {data.profile.department} · {data.profile.employeeId}
-              </Text>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Badge variant="neutral">{data.profile.account}</Badge>
-                <Badge variant="blue">{data.profile.email}</Badge>
-                <Badge variant="neutral">{data.profile.location}</Badge>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="flex min-w-0 items-center gap-4">
+              <Avatar name={sessionUser.name} src={sessionUser.avatarUrl} size="lg" />
+              <div className="min-w-0">
+                <Text variant="heading1" as="h1">{sessionUser.name}</Text>
+                <Text variant="secondary">
+                  {[sessionUser.roleName, sessionUser.department].filter(Boolean).join(' · ')}
+                </Text>
               </div>
             </div>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" icon={Key} onClick={() => { setPasswords({password:'', confirmation:''}); setIsChangingPassword(true); }}>{copy.changePassword}</Button>
+              <Button variant="secondary" icon={PencilSimpleLine} onClick={openEditor}>{copy.editProfile}</Button>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" icon={PencilSimpleLine} onClick={openProfileDialog}>{copy.editProfile}</Button>
-            <Button variant="primary" icon={ShieldCheck} onClick={() => setIsSecurityDialogOpen(true)}>{copy.securitySettings}</Button>
+          <div className="grid gap-5 border-t border-kumo-line pt-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+            <div className="min-w-0">
+              <DetailGrid items={details.contact} className="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" />
+            </div>
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              {sessionUser.email ? (
+                <Button variant="secondary" icon={EnvelopeSimple} onClick={() => { window.location.href = `mailto:${sessionUser.email}`; }}>
+                  {copy.sendEmail}
+                </Button>
+              ) : null}
+              {sessionUser.phone ? (
+                <Button variant="secondary" icon={Phone} onClick={() => { window.location.href = `tel:${sessionUser.phone}`; }}>
+                  {copy.callPhone}
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
       </Card>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.45fr)]">
-        <div className="flex flex-col gap-4">
-          <Card>
-            <div className="flex flex-col gap-4">
-              <SectionTitle title={<span className="inline-flex items-center gap-2"><IdentificationCard className="size-5" />{copy.profileDetails}</span>} />
-              <DetailGrid items={data.personalDetails} />
-            </div>
-          </Card>
-
-          <Card>
-            <div className="flex flex-col gap-4">
-              <SectionTitle title={<span className="inline-flex items-center gap-2"><Phone className="size-5" />{copy.contactDetails}</span>} />
-              <DetailGrid items={data.contactDetails} />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="secondary"
-                  icon={EnvelopeSimple}
-                  onClick={() => {
-                    window.location.href = `mailto:${data.profile.email}`;
-                  }}
-                >
-                  {copy.sendEmail}
-                </Button>
-                <Button
-                  variant="secondary"
-                  icon={Phone}
-                  onClick={() => {
-                    window.location.href = `tel:${data.profile.phone.replace(/\s/g, '')}`;
-                  }}
-                >
-                  {copy.callPhone}
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-
-        <Card>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="h-full">
+          <div className="flex flex-col gap-4">
+            <SectionTitle title={<span className="inline-flex items-center gap-2"><IdentificationCard className="size-5" />{copy.profileDetails}</span>} />
+            <DetailGrid items={details.personal} />
+          </div>
+        </Card>
+        <Card className="h-full">
           <div className="flex flex-col gap-4">
             <SectionTitle title={<span className="inline-flex items-center gap-2"><Buildings className="size-5" />{copy.organization}</span>} />
-            <DetailGrid items={data.organizationDetails} />
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="purple">{data.profile.role}</Badge>
-              <Badge variant={colorToBadgeVariant('blue')}>{data.profile.department}</Badge>
-            </div>
+            <DetailGrid items={details.organization} />
           </div>
         </Card>
       </div>
 
-      <ProfileDialog
-        open={isProfileDialogOpen}
-        profileDraft={profileDraft}
-        data={data}
-        message={profileMessage}
-        isSaving={isProfileSaving}
-        locale={locale}
-        onOpenChange={setIsProfileDialogOpen}
-        onDraftChange={setProfileDraft}
-        onSave={saveProfile}
-      />
+      <Dialog.Root open={isEditing} onOpenChange={setIsEditing}>
+        <Dialog size="xl" className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden p-0">
+          <div className="border-b border-kumo-line px-6 py-5">
+            <Dialog.Title>{copy.editTitle}</Dialog.Title>
+          </div>
+          <div className="min-h-0 overflow-y-auto px-6 py-5">
+            <div className="mb-5 flex items-center gap-4 border-b border-kumo-line pb-5">
+              <Avatar name={sessionUser.name} src={sessionUser.avatarUrl} size="lg" />
+              <input ref={avatarPicker} className="sr-only" type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={event=>{const file=event.target.files?.[0];if(file)void uploadAvatar(file);}} />
+              <Button type="button" variant="secondary" icon={Camera} loading={avatarSaving} onClick={()=>avatarPicker.current?.click()}>{copy.changeAvatar}</Button>
+            </div>
+            <div className="grid gap-x-5 gap-y-4 sm:grid-cols-2">
+              <FormInput label={copy.name} value={draft.name} required onValueChange={name => setDraft(current => ({...current,name}))} />
+              <FormInput label={copy.employeeNo} value={draft.employeeNo} onValueChange={employeeNo => setDraft(current => ({...current,employeeNo}))} />
+              <FormInput label={copy.email} value={draft.email} type="email" onValueChange={email => setDraft(current => ({...current,email}))} />
+              <FormInput label={copy.phone} value={draft.phone} onValueChange={phone => setDraft(current => ({...current,phone}))} />
+              <FormInput label={copy.enterpriseWechat} value={draft.enterpriseWechat} onValueChange={enterpriseWechat => setDraft(current => ({...current,enterpriseWechat}))} />
+              <FormInput label={copy.emergencyContact} value={draft.emergencyContact} onValueChange={emergencyContact => setDraft(current => ({...current,emergencyContact}))} />
+              <FormInput label={copy.jobTitle} value={draft.jobTitle} onValueChange={jobTitle => setDraft(current => ({...current,jobTitle}))} />
+              <FormInput label={copy.manager} value={draft.managerName} onValueChange={managerName => setDraft(current => ({...current,managerName}))} />
+              <FormInput label={copy.location} value={draft.officeLocation} onValueChange={officeLocation => setDraft(current => ({...current,officeLocation}))} />
+              <FormDateInput
+                label={copy.joinedAt}
+                value={draft.joinedAt}
+                locale={language}
+                onValueChange={joinedAt => setDraft(current => ({...current,joinedAt}))}
+              />
+            </div>
+          </div>
+          <div className="flex shrink-0 justify-end gap-2 border-t border-kumo-line px-6 py-4">
+            <Dialog.Close render={<Button variant="secondary">{copy.cancel}</Button>} />
+            <Button variant="primary" loading={saving} disabled={!draft.name.trim()} onClick={() => void save()}>{copy.save}</Button>
+          </div>
+        </Dialog>
+      </Dialog.Root>
 
-      <SecurityDialog
-        open={isSecurityDialogOpen}
-        data={data}
-        message={securityMessage}
-        savingSecurityKey={savingSecurityKey}
-        locale={locale}
-        onOpenChange={setIsSecurityDialogOpen}
-        onMessageDismiss={() => setSecurityMessage(null)}
-        onToggle={(setting, value) => {
-          void updateSecuritySetting(setting, value);
-        }}
-      />
+      <Dialog.Root open={isChangingPassword} onOpenChange={setIsChangingPassword}>
+        <Dialog size="base" className="p-6">
+          <div className="flex flex-col gap-5">
+            <Dialog.Title>{copy.changePasswordTitle}</Dialog.Title>
+            <div className="grid gap-4">
+              <FormInput label={copy.newPassword} value={passwords.password} type="password" autoComplete="new-password" required onValueChange={password => setPasswords(current => ({...current,password}))} />
+              <FormInput label={copy.confirmNewPassword} value={passwords.confirmation} type="password" autoComplete="new-password" required onValueChange={confirmation => setPasswords(current => ({...current,confirmation}))} />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Dialog.Close render={<Button variant="secondary">{copy.cancel}</Button>} />
+              <Button variant="primary" loading={saving} disabled={!passwords.password||!passwords.confirmation} onClick={() => void savePassword()}>{copy.changePassword}</Button>
+            </div>
+          </div>
+        </Dialog>
+      </Dialog.Root>
     </div>
   );
-}
-
-export function UserCenterPage({
-  locale,
-  onProfileSaved,
-}: {
-  locale: Locale;
-  onProfileSaved?: (profile: UserProfile) => void;
-}) {
-  return <UserCenterPanel locale={locale} onProfileSaved={onProfileSaved} />;
 }

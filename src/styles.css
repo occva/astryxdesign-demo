@@ -21,3 +21,211 @@ body {
   margin: 0;
   background: var(--color-kumo-canvas);
 }
+
+/* Organization mind map: ELK layout + React Flow interaction. */
+.organization-flow-shell,
+.organization-flow {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.organization-flow {
+  --organization-flow-line: color-mix(in srgb, var(--text-color-kumo-subtle) 48%, transparent);
+  --organization-flow-grid: color-mix(in srgb, var(--color-kumo-line) 45%, transparent);
+  --xy-background-color: var(--color-kumo-canvas);
+  --xy-edge-stroke: var(--organization-flow-line);
+  --xy-controls-button-background-color: var(--color-kumo-base);
+  --xy-controls-button-background-color-hover: var(--color-kumo-tint);
+  --xy-controls-button-border-color: var(--color-kumo-line);
+  --xy-controls-button-color: var(--text-color-kumo-default);
+  --xy-controls-box-shadow: 0 1px 3px var(--color-kumo-shadow-drop);
+}
+
+.organization-flow .react-flow__pane {
+  cursor: grab;
+}
+
+.organization-flow .react-flow__pane.dragging {
+  cursor: grabbing;
+}
+
+.organization-flow .react-flow__edge-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.organization-flow .react-flow__controls {
+  overflow: hidden;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--radius-lg);
+}
+
+.organization-flow .react-flow__controls-button {
+  border-bottom-color: var(--color-kumo-line);
+}
+
+.organization-flow-department,
+.organization-flow-person {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-kumo-base);
+  box-shadow: 0 1px 0 var(--color-kumo-shadow-edge);
+}
+
+.organization-flow-department {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 0.875rem;
+}
+
+.organization-flow-department.is-expandable {
+  cursor: pointer;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.organization-flow-department.is-expandable:hover {
+  border-color: color-mix(in srgb, var(--color-kumo-brand) 45%, var(--color-kumo-line));
+  box-shadow: 0 2px 8px var(--color-kumo-shadow-drop);
+}
+
+.organization-flow-department.is-expandable:focus-visible {
+  outline: 2px solid var(--color-kumo-focus);
+  outline-offset: 2px;
+}
+
+.organization-flow-person {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+}
+
+.organization-flow-metrics {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr 0.9fr;
+  gap: 0.625rem;
+  margin: auto 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-kumo-line);
+  font-size: 0.75rem;
+}
+
+.organization-flow-metrics dt {
+  overflow: hidden;
+  color: var(--text-color-kumo-subtle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.organization-flow-metrics dd {
+  margin: 0.125rem 0 0;
+  color: var(--text-color-kumo-default);
+  font-weight: 600;
+}
+
+.organization-flow-avatar {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--color-kumo-line);
+  border-radius: 999px;
+  background: var(--color-kumo-tint);
+  color: var(--text-color-kumo-subtle);
+}
+
+.organization-flow-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.organization-flow-avatar svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.organization-flow-junction {
+  position: relative;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+}
+
+.organization-flow-toggle {
+  display: grid;
+  width: 1.375rem;
+  height: 1.375rem;
+  place-items: center;
+  border: 1px solid var(--organization-flow-line);
+  border-radius: 999px;
+  background: var(--color-kumo-base);
+  color: var(--text-color-kumo-subtle);
+  font-size: 0.625rem;
+  font-weight: 650;
+  line-height: 1;
+  box-shadow: 0 1px 0 var(--color-kumo-shadow-edge);
+}
+
+.organization-flow-toggle:hover,
+.organization-flow-toggle.is-expanded {
+  border-color: color-mix(in srgb, var(--color-kumo-brand) 55%, var(--color-kumo-line));
+  color: var(--color-kumo-brand);
+}
+
+.organization-flow-toggle:focus-visible {
+  outline: 2px solid var(--color-kumo-focus);
+  outline-offset: 2px;
+}
+
+.organization-flow-handle {
+  width: 1px !important;
+  min-width: 1px !important;
+  height: 1px !important;
+  min-height: 1px !important;
+  border: 0 !important;
+  background: transparent !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Kumo defaults to the bottom-right; application feedback stays above page content. */
+[role="region"][aria-live="polite"][aria-label="Notifications"] {
+  top: 1rem !important;
+  right: 1rem !important;
+  bottom: auto !important;
+  z-index: 1000 !important;
+}
+
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="dialog"],
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="alertdialog"] {
+  --offset-y: calc(var(--toast-offset-y) + var(--toast-index) * var(--gap) + var(--toast-swipe-movement-y)) !important;
+  top: 0 !important;
+  bottom: auto !important;
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(calc(var(--toast-swipe-movement-y) + var(--toast-index) * var(--peek) + var(--shrink) * var(--height)))
+    scale(var(--scale)) !important;
+  transform-origin: top right !important;
+}
+
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="dialog"][data-expanded],
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="alertdialog"][data-expanded] {
+  transform: translateX(var(--toast-swipe-movement-x))
+    translateY(var(--offset-y)) !important;
+}
+
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="dialog"][data-starting-style],
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="alertdialog"][data-starting-style],
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="dialog"][data-ending-style]:not([data-swipe-direction]),
+[role="region"][aria-live="polite"][aria-label="Notifications"] > [role="alertdialog"][data-ending-style]:not([data-swipe-direction]) {
+  transform: translateY(-150%) !important;
+}

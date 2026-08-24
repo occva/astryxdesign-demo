@@ -1,4 +1,4 @@
-# AGENTS
+<!--# AGENTS
 
 Project-specific guidance for AI coding agents.
 
@@ -30,4 +30,4 @@ MORE CLI:
   docs <topic>       color, elevation, icons, illustrations, layout, migration, motion, principles, shape, spacing, styling, theme, tokens, typography
   swizzle <Name>     eject component source for deep customization
   upgrade --apply    run after any @astryxdesign/core bump
-<!-- ASTRYX:END -->
+<!-- ASTRYX:END -->-->
